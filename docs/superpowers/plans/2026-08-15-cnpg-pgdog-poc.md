@@ -33,12 +33,13 @@ The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. Thi
 CUE packages are directory-scoped, so the layout is two packages: a values
 file at the root and a single machinery directory:
 
-- `topology.cue` (repo root, `package cnpgdog`) — the values and their backing
-  types (`#Topology` + `topology`, `#ShardedTable` + `shardedTables`). The only
-  file edited day to day.
-- `lib/` (`package lib`) — all machinery: the `fabric` derivation
-  (`lib/fabric.cue`), the POC-grade k8s/CNPG partial schemas (`lib/schema.cue`),
-  and the renderers + exports (`lib/cnpg.cue`, `lib/pgdog.cue`, `lib/kind.cue`,
+- `topology.cue` (repo root, `package cnpgdog`) — pure values, no schemas and
+  no imports: `topology` and `shardedTables`. The only file edited day to day.
+- `lib/` (`package lib`) — all machinery: the schemas (`#Topology`,
+  `#ShardedTable`, `#Shard`, `#Fabric`) and the `fabric` derivation
+  (`lib/fabric.cue`, which imports the root values and validates them against
+  the schemas), the POC-grade k8s/CNPG partial schemas (`lib/schema.cue`), and
+  the renderers + exports (`lib/cnpg.cue`, `lib/pgdog.cue`, `lib/kind.cue`,
   `lib/namespace.cue`, `lib/manifests.cue`, `lib/sql.cue`). Imports the root
   package as `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required
   because the module path ends in a hyphen).
