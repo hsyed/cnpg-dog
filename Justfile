@@ -5,11 +5,15 @@ default:
     @just --list
 
 # Create the kind cluster and install the CNPG operator
-up: kind-up
+up: kind-up operator-up
 
 kind-up:
     kind create cluster --config kind.yaml --image "${KIND_NODE_IMAGE}" --wait 120s
     kubectl config use-context "kind-${CLUSTER_NAME}"
+
+operator-up:
+    kubectl apply --server-side -f "${CNPG_MANIFEST}"
+    kubectl -n cnpg-system wait --for=condition=Available deployment/cnpg-controller-manager --timeout=180s
 
 # Render CUE to plain YAML. PURE: touches no cluster, reads no environment.
 render:
