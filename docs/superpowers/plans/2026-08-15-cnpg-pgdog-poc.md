@@ -757,7 +757,7 @@ _clusters: [for s in fabric.shards {
 			}
 			postgresql: {
 				synchronous: {
-					method: "any"
+					method: "first"
 					number: 1
 				}
 				syncReplicaElectionConstraint: {
