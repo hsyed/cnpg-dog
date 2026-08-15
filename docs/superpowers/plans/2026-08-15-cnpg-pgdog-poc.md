@@ -28,6 +28,17 @@ Exact values. Every task inherits these.
 
 The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. This plan hand-writes minimal partial schemas instead (`schema/k8s.cue`, `schema/cnpg.cue`) and uses **`kubectl apply --dry-run=server`** as the authoritative schema gate. Rationale: vendoring CUE definitions from the CNPG CRD requires either a Go toolchain plus `cue get go`, or Timoni's `mod vendor crd` — both add tooling risk to a POC for validation that server-side dry-run performs better anyway, against the real API server. `cue vet` still checks every constraint we author ourselves. Partial schemas must carry a comment saying they are POC-grade and intentionally incomplete.
 
+### Deviation from spec §5, recorded deliberately
+
+CUE packages are directory-scoped: files in different directories are different
+packages even with the same `package` clause. The spec's `schema/` and `render/`
+subdirectories therefore cannot be one `cnpgdog` package, and the tight mutual
+references (render → fabric → topology → schema) make imports circular. All
+`.cue` files live at the repo root in one `package cnpgdog`. The file *names*
+still convey the schema/render split (`schema.cue`, `cnpg.cue`, `pgdog.cue`,
+`kind.cue`, `namespace.cue`, `manifests.cue`, `sql.cue`). This is the only way
+to realize the "one value read twice" claim in CUE's package model.
+
 ---
 
 ## File Structure

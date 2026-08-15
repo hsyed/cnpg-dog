@@ -17,7 +17,19 @@ operator-up:
 
 # Render CUE to plain YAML. PURE: touches no cluster, reads no environment.
 render:
-    @echo "not implemented until Task 5" && exit 1
+    mkdir -p rendered
+    cue export -e kindConfig --out yaml . > rendered/kind.yaml
+
+# Re-render and fail if committed output is stale, or if the kind fixture drifted
+check-render: render
+    diff -u <(yq -P 'sort_keys(..)' kind.yaml) <(yq -P 'sort_keys(..)' rendered/kind.yaml)
+    git diff --exit-code -- rendered/
+
+fmt:
+    cue fmt ./...
+
+vet:
+    cue vet ./...
 
 # Apply rendered manifests, wave by wave
 apply:
@@ -30,10 +42,6 @@ seed:
 # Run all assertions
 check:
     @echo "not implemented until Task 10" && exit 1
-
-# Re-render and fail if the committed output is stale
-check-render:
-    @echo "not implemented until Task 5" && exit 1
 
 # Delete the kind cluster
 down:
