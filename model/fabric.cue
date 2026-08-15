@@ -1,4 +1,4 @@
-package cnpgdog
+package model
 
 import (
 	"list"

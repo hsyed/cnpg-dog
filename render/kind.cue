@@ -2,7 +2,7 @@ package render
 
 import (
 	"list"
-	"github.com/hsyed/cnpg-dog:cnpgdog"
+	"github.com/hsyed/cnpg-dog/model"
 )
 
 kindConfig: {
@@ -11,7 +11,7 @@ kindConfig: {
 	name:       "cnpg-dog"
 	nodes: list.Concat([[
 		{role: "control-plane"},
-	], [for z in cnpgdog.fabric.zones {
+	], [for z in model.fabric.zones {
 		role: "worker"
 		labels: "topology.kubernetes.io/zone": z
 	}]])

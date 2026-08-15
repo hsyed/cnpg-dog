@@ -2,7 +2,7 @@ package render
 
 import (
 	"encoding/toml"
-	"github.com/hsyed/cnpg-dog:cnpgdog"
+	"github.com/hsyed/cnpg-dog/model"
 	"github.com/hsyed/cnpg-dog/schema"
 )
 
@@ -20,12 +20,12 @@ _pgdogConfig: {
 		workers:           2
 		default_pool_size: 10
 	}
-	databases: [for s in cnpgdog.fabric.shards for e in [
+	databases: [for s in model.fabric.shards for e in [
 		{name: s.db, host: s.rw, port: 5432, role: "primary", shard: s.id, database_name: s.db},
 		{name: s.db, host: s.ro, port: 5432, role: "replica", shard: s.id, database_name: s.db},
 	] {e}]
-	sharded_tables: [for t in cnpgdog.fabric.shardedTables {
-		database:  cnpgdog.fabric.topology.name
+	sharded_tables: [for t in model.fabric.shardedTables {
+		database:  model.fabric.topology.name
 		name:      t.table
 		column:    t.column
 		data_type: t.dataType
@@ -33,8 +33,8 @@ _pgdogConfig: {
 }
 
 _pgdogUsers: users: [{
-	name:     cnpgdog.fabric.topology.name
-	database: cnpgdog.fabric.topology.name
+	name:     model.fabric.topology.name
+	database: model.fabric.topology.name
 	password: "dogpassword"
 }]
 
@@ -43,7 +43,7 @@ _pgdogConfigMap: schema.#ConfigMap & {
 	kind:       "ConfigMap"
 	metadata: {
 		name:      "pgdog"
-		namespace: cnpgdog.fabric.topology.name
+		namespace: model.fabric.topology.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	data: "pgdog.toml": toml.Marshal(_pgdogConfig)
@@ -54,7 +54,7 @@ _pgdogSecret: schema.#Secret & {
 	kind:       "Secret"
 	metadata: {
 		name:      "pgdog-users"
-		namespace: cnpgdog.fabric.topology.name
+		namespace: model.fabric.topology.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 	stringData: "users.toml": toml.Marshal(_pgdogUsers)
@@ -65,11 +65,11 @@ _pgdogDeployment: schema.#Deployment & {
 	kind:       "Deployment"
 	metadata: {
 		name:      "pgdog"
-		namespace: cnpgdog.fabric.topology.name
+		namespace: model.fabric.topology.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {
-		replicas: len(cnpgdog.fabric.zones)
+		replicas: len(model.fabric.zones)
 		selector: matchLabels: app: "pgdog"
 		template: {
 			metadata: labels: app: "pgdog"
@@ -105,7 +105,7 @@ _pgdogService: schema.#Service & {
 	kind:       "Service"
 	metadata: {
 		name:      "pgdog"
-		namespace: cnpgdog.fabric.topology.name
+		namespace: model.fabric.topology.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {

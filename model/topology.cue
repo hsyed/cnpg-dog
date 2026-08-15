@@ -1,4 +1,4 @@
-package cnpgdog
+package model
 
 import "github.com/hsyed/cnpg-dog/schema"
 

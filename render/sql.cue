@@ -2,13 +2,13 @@ package render
 
 import (
 	"strings"
-	"github.com/hsyed/cnpg-dog:cnpgdog"
+	"github.com/hsyed/cnpg-dog/model"
 )
 
 // assertSchema renders to rendered/assert_schema.sql: a query that fails if the
 // real column type drifts from what PgDog was told (fabric.shardedTables).
 assertSchema: {
-	_lines: [for t in cnpgdog.fabric.shardedTables {
+	_lines: [for t in model.fabric.shardedTables {
 		"""
 		DO $$ BEGIN
 		  IF NOT EXISTS (

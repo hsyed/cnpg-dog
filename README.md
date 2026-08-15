@@ -55,8 +55,6 @@ of thing that would otherwise surprise a future reader:
 - **Seed shape.** `INSERT ... SELECT` is not sharded by PgDog (all rows landed
   on one shard); single-tuple `INSERT ... VALUES` is. The seed emits one
   statement per row.
-- **CUE package layout.** The `schema/` (definitions), repo root (knobs +
-  `fabric` derivation), and `render/` (renderers + exports) directories are
-  three CUE packages joined by imports. The root package is imported as
-  `"github.com/hsyed/cnpg-dog:cnpgdog"` because the module path ends in a
-  hyphen.
+- **CUE package layout.** No `.cue` files at the repo root: `schema/`
+  (definitions), `model/` (knobs + the `fabric` derivation), and `render/`
+  (renderers + exports) are three packages joined by imports.
