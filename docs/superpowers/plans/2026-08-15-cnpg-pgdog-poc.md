@@ -30,14 +30,25 @@ The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. Thi
 
 ### Deviation from spec §5, recorded deliberately
 
-CUE packages are directory-scoped: files in different directories are different
-packages even with the same `package` clause. The spec's `schema/` and `render/`
-subdirectories therefore cannot be one `cnpgdog` package, and the tight mutual
-references (render → fabric → topology → schema) make imports circular. All
-`.cue` files live at the repo root in one `package cnpgdog`. The file *names*
-still convey the schema/render split (`schema.cue`, `cnpg.cue`, `pgdog.cue`,
-`kind.cue`, `namespace.cue`, `manifests.cue`, `sql.cue`). This is the only way
-to realize the "one value read twice" claim in CUE's package model.
+CUE packages are directory-scoped, so the spec's three-level layout maps to
+three packages connected by imports rather than one flat package:
+
+- `schema/` (`package schema`) — pure definitions (`#Topology`, `#Shard`,
+  `#Fabric`, `#ShardedTable`, plus the POC-grade k8s/CNPG defs). Leaf package.
+- repo root (`package cnpgdog`) — the knobs (`topology.cue`) and the single
+  derivation (`fabric.cue`). Imports `schema`.
+- `render/` (`package render`) — the renderers and the top-level exports
+  (`kindConfig`, `namespace`, `manifests`, `secrets`, `assertSchema`). Imports
+  the root package for `fabric` and `schema` for the definitions.
+
+The root import is written `"github.com/hsyed/cnpg-dog:cnpgdog"` — the module
+path ends in a hyphen (`cnpg-dog`), which is not a valid CUE identifier, so the
+package name must be given explicitly after the colon. The `just render`
+recipes therefore export from `./render` (`cue export -e kindConfig ./render`),
+not from `.`.
+
+This preserves the spec's directory layout and the "one value read twice"
+property: renderers read `cnpgdog.fabric`, they never re-derive a name.
 
 ---
 

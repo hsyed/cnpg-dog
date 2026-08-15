@@ -1,6 +1,8 @@
 package cnpgdog
 
-topology: #Topology & {
+import "github.com/hsyed/cnpg-dog/schema"
+
+topology: schema.#Topology & {
 	name:   "dog"
 	shards: 4
 	zones: ["a", "b", "c"]
@@ -8,7 +10,7 @@ topology: #Topology & {
 	storage:   "1Gi"
 }
 
-shardedTables: [#ShardedTable & {
+shardedTables: [schema.#ShardedTable & {
 	table:    "events"
 	column:   "tenant_id"
 	dataType: "bigint"

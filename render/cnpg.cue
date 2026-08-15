@@ -1,26 +1,31 @@
-package cnpgdog
+package render
+
+import (
+	"github.com/hsyed/cnpg-dog:cnpgdog"
+	"github.com/hsyed/cnpg-dog/schema"
+)
 
 // The `postgresql` block is copied verbatim from docs/reference/cnpg-placement.md:
 // `method: first` yields a single observable `sync` replica (method `any` yields
 // `quorum` and no single sync replica — see that file).
 
-_clusters: [for s in fabric.shards {
-	#CNPGCluster & {
+_clusters: [for s in cnpgdog.fabric.shards {
+	schema.#CNPGCluster & {
 		apiVersion: "postgresql.cnpg.io/v1"
 		kind:       "Cluster"
 		metadata: {
 			name:      s.cluster
-			namespace: fabric.topology.name
+			namespace: cnpgdog.fabric.topology.name
 			annotations: "argocd.argoproj.io/sync-wave": "1"
 		}
 		spec: {
-			instances: len(fabric.zones)
-			imageName: "ghcr.io/cloudnative-pg/postgresql:\(fabric.topology.pgVersion)"
-			storage: size: fabric.topology.storage
+			instances: len(cnpgdog.fabric.zones)
+			imageName: "ghcr.io/cloudnative-pg/postgresql:\(cnpgdog.fabric.topology.pgVersion)"
+			storage: size: cnpgdog.fabric.topology.storage
 			bootstrap: initdb: {
 				database: s.db
 				owner:    s.db
-				secret: name: "\(fabric.topology.name)-app"
+				secret: name: "\(cnpgdog.fabric.topology.name)-app"
 			}
 			postgresql: {
 				synchronous: {
@@ -45,13 +50,13 @@ _clusters: [for s in fabric.shards {
 // Read services we own, so we can set trafficDistribution ourselves rather
 // than depending on CNPG's managed-services API. The replica label key is the
 // one verified in docs/reference/cnpg-placement.md.
-_readServices: [for s in fabric.shards {
-	#Service & {
+_readServices: [for s in cnpgdog.fabric.shards {
+	schema.#Service & {
 		apiVersion: "v1"
 		kind:       "Service"
 		metadata: {
 			name:      s.ro
-			namespace: fabric.topology.name
+			namespace: cnpgdog.fabric.topology.name
 			annotations: "argocd.argoproj.io/sync-wave": "1"
 		}
 		spec: {

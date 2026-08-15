@@ -1,8 +1,11 @@
 package cnpgdog
 
-import "list"
+import (
+	"list"
+	"github.com/hsyed/cnpg-dog/schema"
+)
 
-fabric: #Fabric & {
+fabric: schema.#Fabric & {
 	topology:      _t
 	zones:         _t.zones
 	shardedTables: _st

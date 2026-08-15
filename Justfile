@@ -18,11 +18,11 @@ operator-up:
 # Render CUE to plain YAML. PURE: touches no cluster, reads no environment.
 render:
     mkdir -p rendered rendered-secrets
-    cue export -e kindConfig --out yaml . > rendered/kind.yaml
-    cue export -e namespace --out yaml . > rendered/namespace.yaml
-    cue export -e manifests --out yaml -t pgdogImage="${PGDOG_IMAGE}" . > rendered/manifests.yaml
-    cue export -e secrets --out yaml . > rendered-secrets/secrets.yaml
-    cue export -e 'assertSchema.out' --out text . > rendered/assert_schema.sql
+    cue export -e kindConfig --out yaml ./render > rendered/kind.yaml
+    cue export -e namespace --out yaml ./render > rendered/namespace.yaml
+    cue export -e manifests --out yaml -t pgdogImage="${PGDOG_IMAGE}" ./render > rendered/manifests.yaml
+    cue export -e secrets --out yaml ./render > rendered-secrets/secrets.yaml
+    cue export -e 'assertSchema.out' --out text ./render > rendered/assert_schema.sql
 
 # Structural assertions on rendered output. No cluster required.
 check-manifests: render
