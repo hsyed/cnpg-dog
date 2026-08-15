@@ -207,3 +207,154 @@ items:
         - name: postgres
           port: 5432
           targetPort: 5432
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: pgdog
+      namespace: dog
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+    data:
+      pgdog.toml: |
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s0-rw'
+        name = 'dog'
+        port = 5432
+        role = 'primary'
+        shard = 0
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s0-read'
+        name = 'dog'
+        port = 5432
+        role = 'replica'
+        shard = 0
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s1-rw'
+        name = 'dog'
+        port = 5432
+        role = 'primary'
+        shard = 1
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s1-read'
+        name = 'dog'
+        port = 5432
+        role = 'replica'
+        shard = 1
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s2-rw'
+        name = 'dog'
+        port = 5432
+        role = 'primary'
+        shard = 2
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s2-read'
+        name = 'dog'
+        port = 5432
+        role = 'replica'
+        shard = 2
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s3-rw'
+        name = 'dog'
+        port = 5432
+        role = 'primary'
+        shard = 3
+
+        [[databases]]
+        database_name = 'dog'
+        host = 'dog-s3-read'
+        name = 'dog'
+        port = 5432
+        role = 'replica'
+        shard = 3
+
+        [general]
+        default_pool_size = 10
+        host = '0.0.0.0'
+        port = 6432
+        workers = 2
+
+        [[sharded_tables]]
+        column = 'tenant_id'
+        data_type = 'bigint'
+        database = 'dog'
+        name = 'events'
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: pgdog
+      namespace: dog
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: pgdog
+      template:
+        metadata:
+          labels:
+            app: pgdog
+        spec:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  app: pgdog
+          containers:
+            - name: pgdog
+              image: ghcr.io/pgdogdev/pgdog:v0.1.53
+              command:
+                - /usr/local/bin/pgdog
+              args:
+                - --config
+                - /etc/pgdog/pgdog.toml
+                - --users
+                - /etc/pgdog/users.toml
+                - run
+              ports:
+                - containerPort: 6432
+                  name: pgdog
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/pgdog/pgdog.toml
+                  subPath: pgdog.toml
+                - name: users
+                  mountPath: /etc/pgdog/users.toml
+                  subPath: users.toml
+          volumes:
+            - name: config
+              configMap:
+                name: pgdog
+            - name: users
+              secret:
+                secretName: pgdog-users
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: pgdog
+      namespace: dog
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+    spec:
+      type: ClusterIP
+      selector:
+        app: pgdog
+      ports:
+        - name: pgdog
+          port: 6432
+          targetPort: 6432

@@ -19,7 +19,7 @@ operator-up:
 render:
     mkdir -p rendered rendered-secrets
     cue export -e kindConfig --out yaml . > rendered/kind.yaml
-    cue export -e manifests --out yaml . > rendered/manifests.yaml
+    cue export -e manifests --out yaml -t pgdogImage="${PGDOG_IMAGE}" . > rendered/manifests.yaml
     cue export -e secrets --out yaml . > rendered-secrets/secrets.yaml
 
 # Structural assertions on rendered output. No cluster required.
@@ -31,6 +31,15 @@ check-manifests: render
     done
     @echo "PASS: 4 shards, 4 read services with PreferSameZone"
 
+# Assert the rendered pgdog.toml has the expected routing table.
+check-pgdog-config: render
+    yq -r '.items[] | select(.kind == "ConfigMap" and .metadata.name == "pgdog") | .data["pgdog.toml"]' rendered/manifests.yaml > /tmp/pgdog-rendered.toml
+    test "$(grep -c '^\[\[databases\]\]' /tmp/pgdog-rendered.toml)" = "8"
+    grep -q 'shard = 3' /tmp/pgdog-rendered.toml
+    grep -q "host = 'dog-s3-read'" /tmp/pgdog-rendered.toml
+    grep -q "name = 'events'" /tmp/pgdog-rendered.toml
+    @echo "PASS: 8 database entries (4 shards x primary+replica), sharded events table"
+
 # Re-render and fail if committed output is stale, or if the kind fixture drifted
 check-render: render
     diff -u <(yq -P 'sort_keys(..)' kind.yaml) <(yq -P 'sort_keys(..)' rendered/kind.yaml)
@@ -38,7 +47,6 @@ check-render: render
 
 fmt:
     cue fmt ./...
-
 vet:
     cue vet ./...
 

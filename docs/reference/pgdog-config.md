@@ -6,17 +6,23 @@ This file is the source of truth for the TOML key names the CUE renderer emits.
 
 ## CLI invocation (critical)
 
-PgDog v0.1.53 uses subcommands. The image entrypoint is `/usr/local/bin/pgdog`
-with **no default subcommand**, so the Deployment must pass `run`:
+PgDog v0.1.53 uses subcommands. The image has **no ENTRYPOINT** — its Cmd is
+`["/usr/local/bin/pgdog"]` — so a Kubernetes Deployment must set both `command`
+and `args` explicitly:
 
-```
-pgdog --config /etc/pgdog/pgdog.toml --users /etc/pgdog/users.toml run
+```yaml
+command: ["/usr/local/bin/pgdog"]
+args:    ["--config", "/etc/pgdog/pgdog.toml", "--users", "/etc/pgdog/users.toml", "run"]
 ```
 
-The `-c/--config` and `-u/--users` flags precede the subcommand. Without `run`,
-the binary prints help and exits — an empty "running" Deployment that crashes
-in a loop. There is also a `configcheck` subcommand that validates both files
-and exits non-zero on any error; it is the cheapest parse-only gate.
+Setting `args` alone replaces the binary path and the container fails with
+`exec: "--config": executable file not found`. The `run` subcommand is also
+required — without it the binary prints help and exits, so a "running" pod
+crashes in a loop.
+
+The `-c/--config` and `-u/--users` flags precede the subcommand. There is a
+`configcheck` subcommand that validates both files and exits non-zero on any
+error; it is the cheapest parse-only gate.
 
 ## Key names (all verified)
 
