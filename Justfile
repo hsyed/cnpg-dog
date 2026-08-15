@@ -21,6 +21,7 @@ render:
     cue export -e kindConfig --out yaml . > rendered/kind.yaml
     cue export -e manifests --out yaml -t pgdogImage="${PGDOG_IMAGE}" . > rendered/manifests.yaml
     cue export -e secrets --out yaml . > rendered-secrets/secrets.yaml
+    cue export -e 'assertSchema.out' --out text . > rendered/assert_schema.sql
 
 # Structural assertions on rendered output. No cluster required.
 check-manifests: render
@@ -60,8 +61,16 @@ wait:
     kubectl -n "${APP_NS}" wait --for=condition=Ready cluster --all --timeout=600s
 
 # Apply schema and seed data through PgDog
-seed:
-    @echo "not implemented until Task 9" && exit 1
+seed: render
+    kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
+      --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
+      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < sql/schema.sql
+    kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
+      --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
+      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < rendered/assert_schema.sql
+    kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
+      --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
+      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < sql/seed.sql
 
 # Run all assertions
 check:
