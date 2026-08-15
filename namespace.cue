@@ -9,6 +9,10 @@ _namespace: #Namespace & {
 	}
 }
 
+// Exported alone so `just apply` can create it before the secrets (which live
+// in it) and before the clusters (which reference it).
+namespace: _namespace
+
 // App credentials. Rendered into the gitignored secrets stream, never committed.
 _appSecret: #Secret & {
 	apiVersion: "v1"

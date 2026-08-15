@@ -19,6 +19,7 @@ operator-up:
 render:
     mkdir -p rendered rendered-secrets
     cue export -e kindConfig --out yaml . > rendered/kind.yaml
+    cue export -e namespace --out yaml . > rendered/namespace.yaml
     cue export -e manifests --out yaml -t pgdogImage="${PGDOG_IMAGE}" . > rendered/manifests.yaml
     cue export -e secrets --out yaml . > rendered-secrets/secrets.yaml
     cue export -e 'assertSchema.out' --out text . > rendered/assert_schema.sql
@@ -53,6 +54,7 @@ vet:
 
 # Apply rendered manifests, wave by wave
 apply: render
+    kubectl apply --server-side -f rendered/namespace.yaml
     kubectl apply --server-side -f rendered-secrets/secrets.yaml
     kubectl apply --server-side -f rendered/manifests.yaml
     just wait
@@ -73,8 +75,10 @@ seed: render
       psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < sql/seed.sql
 
 # Run all assertions
-check:
+check: check-render check-manifests check-pgdog-config
     bash scripts/check-placement.sh
+    bash scripts/check-routing.sh
+    @echo "ALL CHECKS PASSED"
 
 # Delete the kind cluster
 down:
