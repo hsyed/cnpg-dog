@@ -7,11 +7,10 @@ import (
 
 // #Topology is the complete set of knobs for the fabric.
 #Topology: {
-	name:                         string
-	shards:                       int & >=1
-	zones: [...string] & [_, ...] // at least one zone
-	pgVersion:                    string
-	storage:                      string
+	name:      string
+	shards:    int & >=1
+	pgVersion: string
+	storage:   string
 }
 
 // #ShardedTable is the one fact PgDog needs about the schema. Consumed twice:
@@ -34,18 +33,19 @@ import (
 
 #Fabric: {
 	topology: #Topology
-	zones: [...string]
+	zones: [...string] & [_, ...]
 	shards: [...#Shard]
 	shardedTables: [...#ShardedTable]
 }
 
 // The raw values from the root, validated against their schemas.
 _topology: cnpgdog.topology & #Topology
+_zones: cnpgdog.zones & [...string] & [_, ...]
 _shardedTables: cnpgdog.shardedTables & [...#ShardedTable]
 
 fabric: #Fabric & {
 	topology:      _topology
-	zones:         _topology.zones
+	zones:         _zones
 	shardedTables: _shardedTables
 	shards: [for i in list.Range(0, _topology.shards, 1) {
 		id:      i

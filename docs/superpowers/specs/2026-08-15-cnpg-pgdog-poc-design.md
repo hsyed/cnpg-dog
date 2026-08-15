@@ -103,10 +103,13 @@ POC.
 topology: #Topology & {
     name:      "dog"
     shards:    4
-    zones:     ["a", "b", "c"]
     pgVersion: "18"
     storage:   "1Gi"
 }
+
+// Placement is a separate concern from data topology: the zones the fabric
+// spreads across, consumed by kind, the CNPG spread constraints, and PgDog.
+zones: ["a", "b", "c"]
 ```
 
 ### Layer 2 — fabric
@@ -117,6 +120,7 @@ concatenation.
 ```cue
 fabric: #Fabric & {
     _t: topology
+    _z: zones
     shards: [for i in list.Range(0, _t.shards, 1) {
         id:      i
         cluster: "\(_t.name)-s\(i)"   // CNPG Cluster metadata.name
@@ -124,7 +128,7 @@ fabric: #Fabric & {
         ro:      "\(cluster)-ro"      // read path, PreferSameZone
         db:      _t.name
     }]
-    zones: _t.zones
+    zones: _z
 }
 ```
 
