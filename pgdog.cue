@@ -77,10 +77,10 @@ _pgdogDeployment: #Deployment & {
 					labelSelector: matchLabels: app: "pgdog"
 				}]
 				containers: [{
-					name:    "pgdog"
-					image:   _pgdogImage
+					name:  "pgdog"
+					image: _pgdogImage
 					command: ["/usr/local/bin/pgdog"]
-					args:    ["--config", "/etc/pgdog/pgdog.toml", "--users", "/etc/pgdog/users.toml", "run"]
+					args: ["--config", "/etc/pgdog/pgdog.toml", "--users", "/etc/pgdog/users.toml", "run"]
 					ports: [{containerPort: 6432, name: "pgdog"}]
 					volumeMounts: [
 						{name: "config", mountPath: "/etc/pgdog/pgdog.toml", subPath: "pgdog.toml"},

@@ -1,4 +1,5 @@
-CREATE TABLE IF NOT EXISTS events (
+DROP TABLE IF EXISTS events;
+CREATE TABLE events (
     id        BIGSERIAL,
     tenant_id BIGINT NOT NULL,
     payload   TEXT   NOT NULL,
