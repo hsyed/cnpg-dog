@@ -6,7 +6,7 @@
 
 **Architecture:** Three pure layers in CUE — `topology.cue` (knobs) → `fabric.cue` (derived names and endpoints) → renderers (`render/*.cue`). Both the CNPG `Cluster` resources and PgDog's routing table are functions of the same `fabric` value, so they cannot drift. `cue export` produces plain YAML into `rendered/`, which `just` applies with `kubectl`. No Argo, no Helm, no Timoni.
 
-**Tech Stack:** CUE, Nix flakes, `just`, kind, CloudNativePG 1.30.0, PgDog v0.1.44, PostgreSQL 17.
+**Tech Stack:** CUE, Nix flakes, `just`, kind, CloudNativePG 1.30.0, PgDog v0.1.53, PostgreSQL 18.
 
 **Spec:** `docs/superpowers/specs/2026-08-15-cnpg-pgdog-poc-design.md` — read it before starting. This plan argues from it.
 
@@ -14,10 +14,10 @@
 
 Exact values. Every task inherits these.
 
-- **kind node image:** `kindest/node:v1.34.8@sha256:02722c2dedddcfc00febf5d27fbeb9b7b2c14294c82109ff4a85d89ac9ba3256` (kind v0.32.0 is installed; v1.34 is safely past the `trafficDistribution` GA floor of Kubernetes 1.33).
+- **kind node image:** `kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5` (kind v0.32.0's default; Kubernetes 1.36 is the latest CNPG 1.30-supported version and well past the `trafficDistribution` GA floor of 1.33).
 - **CNPG operator:** `https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.30/releases/cnpg-1.30.0.yaml`, installs into namespace `cnpg-system`.
-- **PgDog image:** `ghcr.io/pgdogdev/pgdog:v0.1.44`. Config via `pgdog --config /etc/pgdog/pgdog.toml --users /etc/pgdog/users.toml`.
-- **Postgres image:** `ghcr.io/cloudnative-pg/postgresql:17`.
+- **PgDog image:** `ghcr.io/pgdogdev/pgdog:v0.1.53`. Config via `pgdog --config /etc/pgdog/pgdog.toml --users /etc/pgdog/users.toml`.
+- **Postgres image:** `ghcr.io/cloudnative-pg/postgresql:18.4`.
 - **Application namespace:** `dog`. **Cluster name prefix:** `dog`. **Shards:** 4 (`dog-s0`..`dog-s3`). **Zones:** `a`, `b`, `c`.
 - **Every version pin lives in `flake.nix` and nowhere else.** Tasks read them from environment variables exported by the devShell. Never hardcode a version in the Justfile or a CUE file.
 - **`just render` must never read cluster state or the environment.** It is a pure function. Only `just apply`, `just up`, `just seed` and `just check` may touch a cluster.
@@ -93,16 +93,16 @@ docs/reference/
             kind
             kubectl
             kubectl-cnpg
-            postgresql_17
+            postgresql_18
             jq
             yq-go
           ];
 
           # Single home for every version pin. Nothing else may hardcode these.
-          KIND_NODE_IMAGE = "kindest/node:v1.34.8@sha256:02722c2dedddcfc00febf5d27fbeb9b7b2c14294c82109ff4a85d89ac9ba3256";
+          KIND_NODE_IMAGE = "kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5";
           CNPG_MANIFEST = "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.30/releases/cnpg-1.30.0.yaml";
-          PGDOG_IMAGE = "ghcr.io/pgdogdev/pgdog:v0.1.44";
-          PG_IMAGE = "ghcr.io/cloudnative-pg/postgresql:17";
+          PGDOG_IMAGE = "ghcr.io/pgdogdev/pgdog:v0.1.53";
+          PG_IMAGE = "ghcr.io/cloudnative-pg/postgresql:18.4";
           CLUSTER_NAME = "cnpg-dog";
           APP_NS = "dog";
         };
@@ -170,7 +170,7 @@ Run:
 ```bash
 nix develop -c bash -c 'cue version && just --version && kind version && kubectl version --client=true -o yaml | head -3 && psql --version && echo "$KIND_NODE_IMAGE"'
 ```
-Expected: every command prints a version, and the node image string prints with its digest. If `kubectl-cnpg` or `postgresql_17` fails to resolve under the pinned nixpkgs, substitute the nearest available attribute name and record the substitution in `README.md`.
+Expected: every command prints a version, and the node image string prints with its digest. If `kubectl-cnpg` or `postgresql_18` fails to resolve under the pinned nixpkgs, substitute the nearest available attribute name and record the substitution in `README.md`.
 
 - [ ] **Step 6: Verify `just` lists recipes**
 
@@ -235,7 +235,7 @@ kind-up:
 - [ ] **Step 3: Create the cluster**
 
 Run: `nix develop -c just up`
-Expected: kind reports all nodes ready within 120s. If the image digest is rejected by kind v0.32.0, drop to `kindest/node:v1.34.8` without the digest, confirm the cluster boots, then record the change in `flake.nix` and note why in `README.md`.
+Expected: kind reports all nodes ready within 120s. If the image digest is rejected by kind v0.32.0, drop to `kindest/node:v1.36.1` without the digest, confirm the cluster boots, then record the change in `flake.nix` and note why in `README.md`.
 
 - [ ] **Step 4: Write the zone-label assertion and run it**
 
@@ -301,7 +301,7 @@ metadata:
   namespace: probe
 spec:
   instances: 3
-  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.4
   storage:
     size: 256Mi
   postgresql:
@@ -552,7 +552,7 @@ topology: #Topology & {
 	name:      "dog"
 	shards:    4
 	zones:     ["a", "b", "c"]
-	pgVersion: "17"
+	pgVersion: "18"
 	storage:   "1Gi"
 }
 
@@ -1063,7 +1063,7 @@ _pgdogDeployment: #Deployment & {
 				}]
 				containers: [{
 					name:  "pgdog"
-					image: "ghcr.io/pgdogdev/pgdog:v0.1.44"
+					image: "ghcr.io/pgdogdev/pgdog:v0.1.53"
 					args: ["--config", "/etc/pgdog/pgdog.toml", "--users", "/etc/pgdog/users.toml"]
 					ports: [{containerPort: 6432, name: "pgdog"}]
 					volumeMounts: [

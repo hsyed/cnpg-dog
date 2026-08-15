@@ -104,7 +104,7 @@ topology: #Topology & {
     name:      "dog"
     shards:    4
     zones:     ["a", "b", "c"]
-    pgVersion: "17"
+    pgVersion: "18"
     storage:   "1Gi"
 }
 ```
