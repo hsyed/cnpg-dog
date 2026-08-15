@@ -10,17 +10,17 @@ _clusters: [for s in fabric.shards {
 		kind:       "Cluster"
 		metadata: {
 			name:      s.cluster
-			namespace: fabric.topology.name
+			namespace: fabric.shardedCluster.name
 			annotations: "argocd.argoproj.io/sync-wave": "1"
 		}
 		spec: {
 			instances: len(fabric.zones)
-			imageName: "ghcr.io/cloudnative-pg/postgresql:\(fabric.topology.pgVersion)"
-			storage: size: fabric.topology.storage
+			imageName: "ghcr.io/cloudnative-pg/postgresql:\(fabric.shardedCluster.pgVersion)"
+			storage: size: fabric.shardedCluster.storage
 			bootstrap: initdb: {
 				database: s.db
 				owner:    s.db
-				secret: name: "\(fabric.topology.name)-app"
+				secret: name: "\(fabric.shardedCluster.name)-app"
 			}
 			postgresql: {
 				synchronous: {
@@ -51,7 +51,7 @@ _readServices: [for s in fabric.shards {
 		kind:       "Service"
 		metadata: {
 			name:      s.ro
-			namespace: fabric.topology.name
+			namespace: fabric.shardedCluster.name
 			annotations: "argocd.argoproj.io/sync-wave": "1"
 		}
 		spec: {

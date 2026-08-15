@@ -33,9 +33,12 @@ The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. Thi
 CUE packages are directory-scoped, so the layout is two packages: a values
 file at the root and a single machinery directory:
 
-- `topology.cue` (repo root, `package cnpgdog`) — pure values, no schemas and
-  no imports: `topology` and `shardedTables`. The only file edited day to day.
-- `lib/` (`package lib`) — all machinery: the schemas (`#Topology`,
+- `shardedCluster.cue` (repo root, `package cnpgdog`) — the sharded-cluster
+  knobs, pure values, no schemas and no imports: `shardedCluster` (with a
+  `tables` subsection). The only file edited day to day.
+- `zones.cue` (repo root, `package cnpgdog`) — placement, a separate concern
+  from data topology: the availability zones.
+- `lib/` (`package lib`) — all machinery: the schemas (`#ShardedCluster`,
   `#ShardedTable`, `#Shard`, `#Fabric`) and the `fabric` derivation
   (`lib/fabric.cue`, which imports the root values and validates them against
   the schemas), the POC-grade k8s/CNPG partial schemas (`lib/schema.cue`), and

@@ -4,7 +4,7 @@ _namespace: #Namespace & {
 	apiVersion: "v1"
 	kind:       "Namespace"
 	metadata: {
-		name: fabric.topology.name
+		name: fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 }
@@ -19,12 +19,12 @@ _appSecret: #Secret & {
 	kind:       "Secret"
 	type:       "kubernetes.io/basic-auth"
 	metadata: {
-		name:      "\(fabric.topology.name)-app"
-		namespace: fabric.topology.name
+		name:      "\(fabric.shardedCluster.name)-app"
+		namespace: fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 	stringData: {
-		username: fabric.topology.name
+		username: fabric.shardedCluster.name
 		password: "dogpassword" // POC-grade. ExternalSecrets would replace this.
 	}
 }

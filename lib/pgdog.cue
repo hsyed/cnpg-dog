@@ -22,8 +22,8 @@ _pgdogConfig: {
 		{name: s.db, host: s.rw, port: 5432, role: "primary", shard: s.id, database_name: s.db},
 		{name: s.db, host: s.ro, port: 5432, role: "replica", shard: s.id, database_name: s.db},
 	] {e}]
-	sharded_tables: [for t in fabric.shardedTables {
-		database:  fabric.topology.name
+	sharded_tables: [for t in fabric.tables {
+		database:  fabric.shardedCluster.name
 		name:      t.table
 		column:    t.column
 		data_type: t.dataType
@@ -31,8 +31,8 @@ _pgdogConfig: {
 }
 
 _pgdogUsers: users: [{
-	name:     fabric.topology.name
-	database: fabric.topology.name
+	name:     fabric.shardedCluster.name
+	database: fabric.shardedCluster.name
 	password: "dogpassword"
 }]
 
@@ -41,7 +41,7 @@ _pgdogConfigMap: #ConfigMap & {
 	kind:       "ConfigMap"
 	metadata: {
 		name:      "pgdog"
-		namespace: fabric.topology.name
+		namespace: fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	data: "pgdog.toml": toml.Marshal(_pgdogConfig)
@@ -52,7 +52,7 @@ _pgdogSecret: #Secret & {
 	kind:       "Secret"
 	metadata: {
 		name:      "pgdog-users"
-		namespace: fabric.topology.name
+		namespace: fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 	stringData: "users.toml": toml.Marshal(_pgdogUsers)
@@ -63,7 +63,7 @@ _pgdogDeployment: #Deployment & {
 	kind:       "Deployment"
 	metadata: {
 		name:      "pgdog"
-		namespace: fabric.topology.name
+		namespace: fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {
@@ -103,7 +103,7 @@ _pgdogService: #Service & {
 	kind:       "Service"
 	metadata: {
 		name:      "pgdog"
-		namespace: fabric.topology.name
+		namespace: fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {

@@ -5,12 +5,13 @@ import (
 	"github.com/hsyed/cnpg-dog:cnpgdog"
 )
 
-// #Topology is the complete set of knobs for the fabric.
-#Topology: {
+// #ShardedCluster is the complete set of knobs for the fabric.
+#ShardedCluster: {
 	name:      string
 	shards:    int & >=1
 	pgVersion: string
 	storage:   string
+	tables: [...#ShardedTable]
 }
 
 // #ShardedTable is the one fact PgDog needs about the schema. Consumed twice:
@@ -32,26 +33,25 @@ import (
 }
 
 #Fabric: {
-	topology: #Topology
+	shardedCluster: #ShardedCluster
 	zones: [...string] & [_, ...]
 	shards: [...#Shard]
-	shardedTables: [...#ShardedTable]
+	tables: [...#ShardedTable]
 }
 
 // The raw values from the root, validated against their schemas.
-_topology: cnpgdog.topology & #Topology
+_shardedCluster: cnpgdog.shardedCluster & #ShardedCluster
 _zones: cnpgdog.zones & [...string] & [_, ...]
-_shardedTables: cnpgdog.shardedTables & [...#ShardedTable]
 
 fabric: #Fabric & {
-	topology:      _topology
-	zones:         _zones
-	shardedTables: _shardedTables
-	shards: [for i in list.Range(0, _topology.shards, 1) {
+	shardedCluster: _shardedCluster
+	zones:          _zones
+	tables:         _shardedCluster.tables
+	shards: [for i in list.Range(0, _shardedCluster.shards, 1) {
 		id:      i
-		cluster: "\(_topology.name)-s\(i)"
+		cluster: "\(_shardedCluster.name)-s\(i)"
 		rw:      "\(cluster)-rw"
 		ro:      "\(cluster)-read"
-		db:      _topology.name
+		db:      _shardedCluster.name
 	}]
 }

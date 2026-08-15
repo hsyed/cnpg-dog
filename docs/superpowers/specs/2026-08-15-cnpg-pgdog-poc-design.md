@@ -76,14 +76,14 @@ additive rather than a rewrite (§7).
 Three layers, each a pure function of the previous one.
 
 ```
-topology.cue      the knobs — the only file edited day to day
+shardedCluster.cue  the knobs — the only file edited day to day
       |
       v
 fabric.cue        every name and endpoint, derived exactly once
       |
-      +--> render/cnpg.cue    Cluster CRs + read Services
-      +--> render/pgdog.cue   ConfigMap(pgdog.toml) + Deployment + Service
-      +--> render/kind.cue    kind cluster config with zone labels
+      +--> lib/cnpg.cue    Cluster CRs + read Services
+      +--> lib/pgdog.cue   ConfigMap(pgdog.toml) + Deployment + Service
+      +--> lib/kind.cue    kind cluster config with zone labels
 ```
 
 ### The central claim
@@ -97,14 +97,19 @@ that points at a cluster which does not exist — not by convention, by unificat
 This claim is falsifiable in roughly 200 lines of CUE, which is the point of the
 POC.
 
-### Layer 1 — topology
+### Layer 1 — shardedCluster
 
 ```cue
-topology: #Topology & {
+shardedCluster: #ShardedCluster & {
     name:      "dog"
     shards:    4
     pgVersion: "18"
     storage:   "1Gi"
+    tables: [#ShardedTable & {
+        table:    "events"
+        column:   "tenant_id"
+        dataType: "bigint"
+    }]
 }
 
 // Placement is a separate concern from data topology: the zones the fabric
@@ -119,7 +124,7 @@ concatenation.
 
 ```cue
 fabric: #Fabric & {
-    _t: topology
+    _t: shardedCluster
     _z: zones
     shards: [for i in list.Range(0, _t.shards, 1) {
         id:      i
@@ -134,7 +139,7 @@ fabric: #Fabric & {
 
 ### Layer 3 — renderers
 
-`render/cnpg.cue` emits, per shard:
+`lib/cnpg.cue` emits, per shard:
 
 - a `postgresql.cnpg.io/v1` `Cluster` with `instances: len(zones)`,
 - `spec.topologySpreadConstraints` on `topology.kubernetes.io/zone`, `maxSkew: 1`,
@@ -144,7 +149,7 @@ fabric: #Fabric & {
   elected outside the primary's zone,
 - a read `Service` carrying `spec.trafficDistribution: PreferSameZone`.
 
-`render/pgdog.cue` emits `[[databases]]` — per shard, one `primary` entry pointing
+`lib/pgdog.cue` emits `[[databases]]` — per shard, one `primary` entry pointing
 at `shards[i].rw` and one `replica` entry pointing at `shards[i].ro`, both stamped
 with `shard = i` — plus `[[sharded_tables]]` from the schema contract. The whole
 structure is marshalled with CUE's `encoding/toml` into a ConfigMap, alongside a
@@ -179,18 +184,20 @@ Justfile               the verbs
 cue.mod/
   module.cue
   gen/                 vendored k8s + CNPG schemas
-topology.cue           the knobs
-schema.cue             #Topology, #Shard, #Fabric, #ShardedTable definitions
-fabric.cue             topology -> fabric
-render/
-  cnpg.cue
-  pgdog.cue
-  kind.cue
+shardedCluster.cue     the knobs (shardedCluster + its tables subsection)
+zones.cue              placement (availability zones)
+lib/
+  fabric.cue           #ShardedCluster/#ShardedTable/#Shard/#Fabric + derivation
+  schema.cue           POC-grade k8s + CNPG partial schemas
+  cnpg.cue             Cluster CRs + read Services
+  pgdog.cue            ConfigMap(pgdog.toml) + Deployment + Service
+  kind.cue             kind cluster config
+  namespace.cue        Namespace + app credentials Secret
   manifests.cue        top-level export, sync-wave annotated
+  sql.cue              generated schema assertion
 sql/
   schema.sql           hand-written DDL
-  generated/
-    assert_schema.sql  rendered from CUE (see §6)
+  seed.sql             hand-written seed data
 rendered/              committed golden output; also a valid Argo source
 docs/superpowers/specs/
 ```
@@ -278,12 +285,12 @@ rendering is wanted later.
 
 | Deferred | Where it attaches |
 |---|---|
-| Add a shard at runtime | Already a one-number change in `topology.cue`; needs schema application to the new shard and a PgDog config reload. |
+| Add a shard at runtime | Already a one-number change in `shardedCluster.cue`; needs schema application to the new shard and a PgDog config reload. |
 | Resharding with data movement | A key-range field on `#Shard`; PgDog's logical-replication resharding is the mechanism. Note that hash sharding remaps most rows on an N to N+1 change, so this is a prerequisite for an honest rebalance. |
 | Failover demonstration | No model change; CNPG promotes and the `-rw` service follows. |
-| Zonal front doors | A comprehension over `zones` in `render/pgdog.cue`, plus a zone-pinned Service per shard. |
-| ExternalSecrets | The secrets seam in `render/pgdog.cue`; PgDog's Helm chart models this as `usersSecret.name` / `configSecret.name` and is worth mirroring. |
-| Observability | PgDog exposes an OpenMetrics endpoint; a ServiceMonitor would slot into `render/pgdog.cue`. |
+| Zonal front doors | A comprehension over `zones` in `lib/pgdog.cue`, plus a zone-pinned Service per shard. |
+| ExternalSecrets | The secrets seam in `lib/pgdog.cue`; PgDog's Helm chart models this as `usersSecret.name` / `configSecret.name` and is worth mirroring. |
+| Observability | PgDog exposes an OpenMetrics endpoint; a ServiceMonitor would slot into `lib/pgdog.cue`. |
 
 ## 9. Risks and uncertainties
 
@@ -324,7 +331,7 @@ unapplied manifests is not complete.
    shows three distinct zones, operator pod is `Running`, and a hand-written
    `pgdog.toml` has been validated against the pinned PgDog image. No CUE renderers
    yet.
-1. **Model.** `schema.cue`, `topology.cue`, `fabric.cue`, and the renderers.
+1. **Model.** `shardedCluster.cue`, `zones.cue`, and the `lib/` package.
    *Gate:* `cue vet` passes and `just render` produces committed golden output.
    This is the one milestone with no live-cluster gate, because it produces no
    cluster state of its own.

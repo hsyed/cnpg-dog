@@ -55,8 +55,8 @@ of thing that would otherwise surprise a future reader:
 - **Seed shape.** `INSERT ... SELECT` is not sharded by PgDog (all rows landed
   on one shard); single-tuple `INSERT ... VALUES` is. The seed emits one
   statement per row.
-- **CUE package layout.** `topology.cue` at the root is pure values (no
-  schemas, no imports); everything else lives under `lib/` as one
-  `package lib` — the schemas (`#Topology`, `#ShardedTable`, `#Shard`,
-  `#Fabric`), the `fabric` derivation, the partial k8s/CNPG schemas, and the
-  renderers.
+- **CUE package layout.** `shardedCluster.cue` (the knobs, with a `tables`
+  subsection) and `zones.cue` (placement) are pure values at the root; all
+  machinery lives under `lib/` as one `package lib` — the schemas
+  (`#ShardedCluster`, `#ShardedTable`, `#Shard`, `#Fabric`), the `fabric`
+  derivation, the partial k8s/CNPG schemas, and the renderers.
