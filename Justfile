@@ -43,8 +43,13 @@ vet:
     cue vet ./...
 
 # Apply rendered manifests, wave by wave
-apply:
-    @echo "not implemented until Task 8" && exit 1
+apply: render
+    kubectl apply --server-side -f rendered-secrets/secrets.yaml
+    kubectl apply --server-side -f rendered/manifests.yaml
+    just wait
+
+wait:
+    kubectl -n "${APP_NS}" wait --for=condition=Ready cluster --all --timeout=600s
 
 # Apply schema and seed data through PgDog
 seed:
@@ -52,7 +57,7 @@ seed:
 
 # Run all assertions
 check:
-    @echo "not implemented until Task 10" && exit 1
+    bash scripts/check-placement.sh
 
 # Delete the kind cluster
 down:
