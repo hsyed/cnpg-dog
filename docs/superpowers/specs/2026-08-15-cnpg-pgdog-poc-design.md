@@ -66,7 +66,7 @@ additive rather than a rewrite (§7).
 | Config language | CUE | User's choice; supersedes an initial Tanka/jsonnet idea. |
 | Render/apply path | Plain CUE module, `cue export` piped to `kubectl apply` | Keeps the whole topology in one type-checked value. Timoni was considered and rejected: it owns the apply path, which duplicates Argo's job and adds a second contract to learn on top of the subject under study. Rendering values for the upstream PgDog Helm chart was rejected because CUE's type checking would stop at the chart boundary, undercutting the central claim. |
 | GitOps | Argo-ready, not Argo-installed | Ordering encoded as sync-wave annotations; `rendered/` is a valid Argo Application source on day one. |
-| Zone model | Placement **plus** zone-local reads | Uses stock Kubernetes locality (`trafficDistribution: PreferClose`) rather than bespoke per-zone proxy configs. |
+| Zone model | Placement **plus** zone-local reads | Uses stock Kubernetes locality (`trafficDistribution: PreferSameZone`) rather than bespoke per-zone proxy configs. |
 | Command runner | `just` | Owns the verbs; the flake owns the binaries. No overlap. |
 | Sharded schema | Plain SQL DDL, sharding contract in CUE | Avoids a DDL generator while preserving the one-fact property, via a generated assertion (§6). |
 | Operator install | Pinned upstream release URL, applied by `just` | A ~6000-line vendor artifact is not worth modelling in CUE. |
@@ -121,7 +121,7 @@ fabric: #Fabric & {
         id:      i
         cluster: "\(_t.name)-s\(i)"   // CNPG Cluster metadata.name
         rw:      "\(cluster)-rw"      // CNPG-owned primary service
-        ro:      "\(cluster)-ro"      // read path, PreferClose
+        ro:      "\(cluster)-ro"      // read path, PreferSameZone
         db:      _t.name
     }]
     zones: _t.zones
@@ -138,7 +138,7 @@ fabric: #Fabric & {
 - `spec.postgresql.syncReplicaElectionConstraint` with
   `nodeLabelsAntiAffinity: ["topology.kubernetes.io/zone"]`, so the sync replica is
   elected outside the primary's zone,
-- a read `Service` carrying `spec.trafficDistribution: PreferClose`.
+- a read `Service` carrying `spec.trafficDistribution: PreferSameZone`.
 
 `render/pgdog.cue` emits `[[databases]]` — per shard, one `primary` entry pointing
 at `shards[i].rw` and one `replica` entry pointing at `shards[i].ro`, both stamped
@@ -155,7 +155,7 @@ kind: 1 control-plane + 3 workers, labeled topology.kubernetes.io/zone = a|b|c
 |
 +-- dog
     +-- dog-s0..s3   Cluster CR, 3 instances, one per zone
-    |                  -> dog-sN-rw, dog-sN-ro (PreferClose)
+    |                  -> dog-sN-rw, dog-sN-ro (PreferSameZone)
     +-- pgdog          Deployment, 3 replicas, zone-spread
     |                    ConfigMap: pgdog.toml   (rendered)
     |                    Secret:    users.toml   (rendered, gitignored)
@@ -301,7 +301,7 @@ the ideal. If that proves awkward, hand-writing a partial `#Cluster` definition
 covering only the fields used is an acceptable POC-grade substitute, and should be
 labelled as such in a comment.
 
-**`trafficDistribution: PreferClose` requires a recent Kubernetes.** The kind node
+**`trafficDistribution: PreferSameZone` requires a recent Kubernetes.** The kind node
 image tag must be chosen accordingly and pinned in the flake. If the field is
 unavailable, the fallback is the older topology-aware-hints annotation, with the
 zone-local read claim downgraded to best-effort.

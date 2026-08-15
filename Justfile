@@ -17,8 +17,19 @@ operator-up:
 
 # Render CUE to plain YAML. PURE: touches no cluster, reads no environment.
 render:
-    mkdir -p rendered
+    mkdir -p rendered rendered-secrets
     cue export -e kindConfig --out yaml . > rendered/kind.yaml
+    cue export -e manifests --out yaml . > rendered/manifests.yaml
+    cue export -e secrets --out yaml . > rendered-secrets/secrets.yaml
+
+# Structural assertions on rendered output. No cluster required.
+check-manifests: render
+    yq -e '[.items[] | select(.kind == "Cluster")] | length == 4' rendered/manifests.yaml > /dev/null
+    for i in 0 1 2 3; do \
+      yq -e "[.items[] | select(.kind == \"Cluster\" and .metadata.name == \"dog-s$i\")] | length == 1" rendered/manifests.yaml > /dev/null; \
+      yq -e "[.items[] | select(.kind == \"Service\" and .metadata.name == \"dog-s$i-read\" and .spec.trafficDistribution == \"PreferSameZone\")] | length == 1" rendered/manifests.yaml > /dev/null; \
+    done
+    @echo "PASS: 4 shards, 4 read services with PreferSameZone"
 
 # Re-render and fail if committed output is stale, or if the kind fixture drifted
 check-render: render

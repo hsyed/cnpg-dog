@@ -534,7 +534,7 @@ package cnpgdog
 	id:      int & >=0
 	cluster: string // CNPG Cluster metadata.name
 	rw:      string // CNPG-owned primary service
-	ro:      string // our read service, PreferClose
+	ro:      string // our read service, PreferSameZone
 	db:      string // database name
 }
 
@@ -700,9 +700,9 @@ check-manifests: render
     test "$(yq '. as $d | [$d.items[] | select(.kind == "Cluster")] | length' rendered/manifests.yaml)" = "4"
     for i in 0 1 2 3; do \
       yq -e ".items[] | select(.kind == \"Cluster\" and .metadata.name == \"dog-s$i\")" rendered/manifests.yaml > /dev/null; \
-      yq -e ".items[] | select(.kind == \"Service\" and .metadata.name == \"dog-s$i-read\") | .spec.trafficDistribution == \"PreferClose\"" rendered/manifests.yaml > /dev/null; \
+      yq -e ".items[] | select(.kind == \"Service\" and .metadata.name == \"dog-s$i-read\") | .spec.trafficDistribution == \"PreferSameZone\"" rendered/manifests.yaml > /dev/null; \
     done
-    @echo "PASS: 4 shards, 4 read services with PreferClose"
+    @echo "PASS: 4 shards, 4 read services with PreferSameZone"
 ```
 
 - [ ] **Step 2: Run it and watch it fail**
@@ -800,7 +800,7 @@ _readServices: [for s in fabric.shards {
 		}
 		spec: {
 			type:                "ClusterIP"
-			trafficDistribution: "PreferClose"
+			trafficDistribution: "PreferSameZone"
 			selector: {
 				"cnpg.io/cluster":      s.cluster
 				"cnpg.io/instanceRole": "replica"
@@ -838,7 +838,7 @@ secrets: {
 - [ ] **Step 6: Run the structural test**
 
 Run: `nix develop -c just check-manifests`
-Expected: PASS — four `Cluster` objects named `dog-s0`..`dog-s3`, four read Services with `PreferClose`.
+Expected: PASS — four `Cluster` objects named `dog-s0`..`dog-s3`, four read Services with `PreferSameZone`.
 
 - [ ] **Step 7: Validate against the real API server**
 
