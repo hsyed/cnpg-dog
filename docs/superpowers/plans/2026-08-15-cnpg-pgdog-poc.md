@@ -30,23 +30,24 @@ The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. Thi
 
 ### Deviation from spec §5, recorded deliberately
 
-CUE packages are directory-scoped, so the spec's three-level layout maps to
-three packages connected by imports, and the repo root holds **no `.cue`
-files**:
+CUE packages are directory-scoped, so the layout is two packages: a values
+file at the root and a single machinery directory:
 
-- `schema/` (`package schema`) — pure definitions (`#Topology`, `#Shard`,
-  `#Fabric`, `#ShardedTable`, plus the POC-grade k8s/CNPG defs). Leaf package.
-- `model/` (`package model`) — the knobs (`model/topology.cue`) and the single
-  derivation (`model/fabric.cue`). Imports `schema`.
-- `render/` (`package render`) — the renderers and the top-level exports
-  (`kindConfig`, `namespace`, `manifests`, `secrets`, `assertSchema`). Imports
-  `model` for `fabric` and `schema` for the definitions.
+- `topology.cue` (repo root, `package cnpgdog`) — the values and their backing
+  types (`#Topology` + `topology`, `#ShardedTable` + `shardedTables`). The only
+  file edited day to day.
+- `lib/` (`package lib`) — all machinery: the `fabric` derivation
+  (`lib/fabric.cue`), the POC-grade k8s/CNPG partial schemas (`lib/schema.cue`),
+  and the renderers + exports (`lib/cnpg.cue`, `lib/pgdog.cue`, `lib/kind.cue`,
+  `lib/namespace.cue`, `lib/manifests.cue`, `lib/sql.cue`). Imports the root
+  package as `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required
+  because the module path ends in a hyphen).
 
-The `just render` recipes export from `./render` (`cue export -e kindConfig
-./render`), not from `.`.
+The `just render` recipes export from `./lib` (`cue export -e kindConfig
+./lib`).
 
-This preserves the spec's layering and the "one value read twice" property:
-renderers read `model.fabric`, they never re-derive a name.
+This preserves the spec's "one value read twice" property: renderers read
+`fabric`, they never re-derive a name.
 
 ---
 

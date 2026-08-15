@@ -1,15 +1,10 @@
-package render
+package lib
 
-import (
-	"github.com/hsyed/cnpg-dog/model"
-	"github.com/hsyed/cnpg-dog/schema"
-)
-
-_namespace: schema.#Namespace & {
+_namespace: #Namespace & {
 	apiVersion: "v1"
 	kind:       "Namespace"
 	metadata: {
-		name: model.fabric.topology.name
+		name: fabric.topology.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 }
@@ -19,17 +14,17 @@ _namespace: schema.#Namespace & {
 namespace: _namespace
 
 // App credentials. Rendered into the gitignored secrets stream, never committed.
-_appSecret: schema.#Secret & {
+_appSecret: #Secret & {
 	apiVersion: "v1"
 	kind:       "Secret"
 	type:       "kubernetes.io/basic-auth"
 	metadata: {
-		name:      "\(model.fabric.topology.name)-app"
-		namespace: model.fabric.topology.name
+		name:      "\(fabric.topology.name)-app"
+		namespace: fabric.topology.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 	stringData: {
-		username: model.fabric.topology.name
+		username: fabric.topology.name
 		password: "dogpassword" // POC-grade. ExternalSecrets would replace this.
 	}
 }
