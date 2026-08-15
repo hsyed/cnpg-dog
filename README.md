@@ -56,7 +56,7 @@ of thing that would otherwise surprise a future reader:
   on one shard); single-tuple `INSERT ... VALUES` is. The seed emits one
   statement per row.
 - **CUE package layout.** `shardedCluster.cue` (the knobs, with a `tables`
-  subsection) and `zones.cue` (placement) are pure values at the root; all
-  machinery lives under `lib/` as one `package lib` — the schemas
-  (`#ShardedCluster`, `#ShardedTable`, `#Shard`, `#Fabric`), the `fabric`
-  derivation, the partial k8s/CNPG schemas, and the renderers.
+  subsection) and `zones.cue` (placement) are pure values at the root;
+  `lib/` holds the schemas (`#ShardedCluster`, `#ShardedTable`, `#Shard`,
+  `#Fabric`) + the `fabric` derivation + partial k8s/CNPG schemas; `render/`
+  holds the renderers. Three packages: root `cnpgdog`, `lib`, `render`.

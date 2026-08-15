@@ -1,7 +1,8 @@
-package lib
+package render
 
 import (
 	"encoding/toml"
+	"github.com/hsyed/cnpg-dog/lib"
 )
 
 // Key names are verified against the pinned image — see docs/reference/pgdog-config.md.
@@ -18,12 +19,12 @@ _pgdogConfig: {
 		workers:           2
 		default_pool_size: 10
 	}
-	databases: [for s in fabric.shards for e in [
+	databases: [for s in lib.fabric.shards for e in [
 		{name: s.db, host: s.rw, port: 5432, role: "primary", shard: s.id, database_name: s.db},
 		{name: s.db, host: s.ro, port: 5432, role: "replica", shard: s.id, database_name: s.db},
 	] {e}]
-	sharded_tables: [for t in fabric.tables {
-		database:  fabric.shardedCluster.name
+	sharded_tables: [for t in lib.fabric.tables {
+		database:  lib.fabric.shardedCluster.name
 		name:      t.table
 		column:    t.column
 		data_type: t.dataType
@@ -31,43 +32,43 @@ _pgdogConfig: {
 }
 
 _pgdogUsers: users: [{
-	name:     fabric.shardedCluster.name
-	database: fabric.shardedCluster.name
+	name:     lib.fabric.shardedCluster.name
+	database: lib.fabric.shardedCluster.name
 	password: "dogpassword"
 }]
 
-_pgdogConfigMap: #ConfigMap & {
+_pgdogConfigMap: lib.#ConfigMap & {
 	apiVersion: "v1"
 	kind:       "ConfigMap"
 	metadata: {
 		name:      "pgdog"
-		namespace: fabric.shardedCluster.name
+		namespace: lib.fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	data: "pgdog.toml": toml.Marshal(_pgdogConfig)
 }
 
-_pgdogSecret: #Secret & {
+_pgdogSecret: lib.#Secret & {
 	apiVersion: "v1"
 	kind:       "Secret"
 	metadata: {
 		name:      "pgdog-users"
-		namespace: fabric.shardedCluster.name
+		namespace: lib.fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 	stringData: "users.toml": toml.Marshal(_pgdogUsers)
 }
 
-_pgdogDeployment: #Deployment & {
+_pgdogDeployment: lib.#Deployment & {
 	apiVersion: "apps/v1"
 	kind:       "Deployment"
 	metadata: {
 		name:      "pgdog"
-		namespace: fabric.shardedCluster.name
+		namespace: lib.fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {
-		replicas: len(fabric.zones)
+		replicas: len(lib.fabric.zones)
 		selector: matchLabels: app: "pgdog"
 		template: {
 			metadata: labels: app: "pgdog"
@@ -98,12 +99,12 @@ _pgdogDeployment: #Deployment & {
 	}
 }
 
-_pgdogService: #Service & {
+_pgdogService: lib.#Service & {
 	apiVersion: "v1"
 	kind:       "Service"
 	metadata: {
 		name:      "pgdog"
-		namespace: fabric.shardedCluster.name
+		namespace: lib.fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {

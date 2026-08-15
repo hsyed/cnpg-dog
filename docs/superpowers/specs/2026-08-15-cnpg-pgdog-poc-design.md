@@ -189,6 +189,7 @@ zones.cue              placement (availability zones)
 lib/
   fabric.cue           #ShardedCluster/#ShardedTable/#Shard/#Fabric + derivation
   schema.cue           POC-grade k8s + CNPG partial schemas
+render/
   cnpg.cue             Cluster CRs + read Services
   pgdog.cue            ConfigMap(pgdog.toml) + Deployment + Service
   kind.cue             kind cluster config

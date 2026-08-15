@@ -38,17 +38,16 @@ file at the root and a single machinery directory:
   `tables` subsection). The only file edited day to day.
 - `zones.cue` (repo root, `package cnpgdog`) — placement, a separate concern
   from data topology: the availability zones.
-- `lib/` (`package lib`) — all machinery: the schemas (`#ShardedCluster`,
-  `#ShardedTable`, `#Shard`, `#Fabric`) and the `fabric` derivation
-  (`lib/fabric.cue`, which imports the root values and validates them against
-  the schemas), the POC-grade k8s/CNPG partial schemas (`lib/schema.cue`), and
-  the renderers + exports (`lib/cnpg.cue`, `lib/pgdog.cue`, `lib/kind.cue`,
-  `lib/namespace.cue`, `lib/manifests.cue`, `lib/sql.cue`). Imports the root
+- `lib/` (`package lib`) — the schemas (`#ShardedCluster`, `#ShardedTable`,
+  `#Shard`, `#Fabric`), the `fabric` derivation (`lib/fabric.cue`), and the
+  POC-grade k8s/CNPG partial schemas (`lib/schema.cue`). Imports the root
   package as `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required
   because the module path ends in a hyphen).
+- `render/` (`package render`) — the renderers and exports (`kindConfig`,
+  `namespace`, `manifests`, `secrets`, `assertSchema`). Imports `lib`.
 
-The `just render` recipes export from `./lib` (`cue export -e kindConfig
-./lib`).
+The `just render` recipes export from `./render` (`cue export -e kindConfig
+./render`).
 
 This preserves the spec's "one value read twice" property: renderers read
 `fabric`, they never re-derive a name.

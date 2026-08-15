@@ -1,10 +1,12 @@
-package lib
+package render
 
-_namespace: #Namespace & {
+import "github.com/hsyed/cnpg-dog/lib"
+
+_namespace: lib.#Namespace & {
 	apiVersion: "v1"
 	kind:       "Namespace"
 	metadata: {
-		name: fabric.shardedCluster.name
+		name: lib.fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 }
@@ -14,17 +16,17 @@ _namespace: #Namespace & {
 namespace: _namespace
 
 // App credentials. Rendered into the gitignored secrets stream, never committed.
-_appSecret: #Secret & {
+_appSecret: lib.#Secret & {
 	apiVersion: "v1"
 	kind:       "Secret"
 	type:       "kubernetes.io/basic-auth"
 	metadata: {
-		name:      "\(fabric.shardedCluster.name)-app"
-		namespace: fabric.shardedCluster.name
+		name:      "\(lib.fabric.shardedCluster.name)-app"
+		namespace: lib.fabric.shardedCluster.name
 		annotations: "argocd.argoproj.io/sync-wave": "0"
 	}
 	stringData: {
-		username: fabric.shardedCluster.name
+		username: lib.fabric.shardedCluster.name
 		password: "dogpassword" // POC-grade. ExternalSecrets would replace this.
 	}
 }

@@ -1,13 +1,14 @@
-package lib
+package render
 
 import (
 	"strings"
+	"github.com/hsyed/cnpg-dog/lib"
 )
 
 // assertSchema renders to rendered/assert_schema.sql: a query that fails if the
-// real column type drifts from what PgDog was told (fabric.tables).
+// real column type drifts from what PgDog was told (lib.fabric.tables).
 assertSchema: {
-	_lines: [for t in fabric.tables {
+	_lines: [for t in lib.fabric.tables {
 		"""
 		DO $$ BEGIN
 		  IF NOT EXISTS (
