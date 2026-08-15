@@ -111,21 +111,17 @@ shardedCluster: #ShardedCluster & {
         dataType: "bigint"
     }]
 }
-
-// Placement is a separate concern from data topology: the zones the fabric
-// spreads across, consumed by kind, the CNPG spread constraints, and PgDog.
-zones: ["a", "b", "c"]
 ```
 
 ### Layer 2 — fabric
 
 Derives the names. Nothing else in the repo constructs a service name by string
-concatenation.
+concatenation. Placement (`zones`) is not part of the fabric — it lives in the
+render layer.
 
 ```cue
 fabric: #Fabric & {
     _t: shardedCluster
-    _z: zones
     shards: [for i in list.Range(0, _t.shards, 1) {
         id:      i
         cluster: "\(_t.name)-s\(i)"   // CNPG Cluster metadata.name
@@ -133,7 +129,6 @@ fabric: #Fabric & {
         ro:      "\(cluster)-ro"      // read path, PreferSameZone
         db:      _t.name
     }]
-    zones: _z
 }
 ```
 
@@ -185,11 +180,11 @@ cue.mod/
   module.cue
   gen/                 vendored k8s + CNPG schemas
 shardedCluster.cue     the knobs (shardedCluster + its tables subsection)
-zones.cue              placement (availability zones)
 lib/
   fabric.cue           #ShardedCluster/#ShardedTable/#Shard/#Fabric + derivation
   schema.cue           POC-grade k8s + CNPG partial schemas
 render/
+  zones.cue            placement (availability zones)
   cnpg.cue             Cluster CRs + read Services
   pgdog.cue            ConfigMap(pgdog.toml) + Deployment + Service
   kind.cue             kind cluster config

@@ -34,18 +34,15 @@ import (
 
 #Fabric: {
 	shardedCluster: #ShardedCluster
-	zones: [...string] & [_, ...]
 	shards: [...#Shard]
 	tables: [...#ShardedTable]
 }
 
 // The raw values from the root, validated against their schemas.
 _shardedCluster: cnpgdog.shardedCluster & #ShardedCluster
-_zones: cnpgdog.zones & [...string] & [_, ...]
 
 fabric: #Fabric & {
 	shardedCluster: _shardedCluster
-	zones:          _zones
 	tables:         _shardedCluster.tables
 	shards: [for i in list.Range(0, _shardedCluster.shards, 1) {
 		id:      i
