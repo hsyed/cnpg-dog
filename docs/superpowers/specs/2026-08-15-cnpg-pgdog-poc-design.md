@@ -9,11 +9,34 @@ Prove out a cloud-native Postgres fabric where [CloudNativePG](https://cloudnati
 manages the shards and [PgDog](https://pgdog.dev/) provides sharded routing in front of
 them, with the entire topology encoded in CUE.
 
-The primary deliverable is **the shape of the configuration model**, not an
-operational demonstration. The POC succeeds if a single CUE value describes the
-whole fabric, both the CloudNativePG resources and PgDog's routing table are pure
-functions of that value, and the result runs on a local `kind` cluster that
-simulates multiple availability zones.
+The primary *intellectual* deliverable is *the shape of the configuration model*.
+The primary *physical* deliverable is **a running `kind` cluster**. Neither
+substitutes for the other: a beautiful model that has never been applied is not a
+result, and the model is only judged good if the cluster it produces actually
+comes up.
+
+### Acceptance criteria
+
+The POC is done when, from a clean checkout on a machine with Nix:
+
+```
+nix develop -c just up      # kind cluster, zone-labeled nodes, CNPG operator
+nix develop -c just apply   # rendered manifests, wave by wave
+nix develop -c just seed
+nix develop -c just check   # all assertions in §6 green
+```
+
+...succeeds end to end with no manual intervention, leaving a live cluster in which:
+
+- 4 CNPG shards are `Cluster` phase healthy, 3 instances each, one instance per
+  simulated zone;
+- PgDog is serving on `:6432` and `psql` through it can write and read;
+- seeded rows are verifiably partitioned across shards (§6.4);
+- `just down && just up && just apply && just check` passes again — teardown and
+  recreate is reproducible, not a one-time lucky boot.
+
+Rendered YAML that has never been applied does not satisfy any of the above.
+Milestones 2 and 3 (§10) are each gated on a live, healthy cluster.
 
 ### Goals
 
@@ -289,10 +312,19 @@ slot in.
 
 ## 10. Implementation milestones
 
+Each milestone is gated on running code, not on files existing. A milestone with
+unapplied manifests is not complete.
+
 0. **Foundation.** Flake, kind cluster with zone labels, CNPG operator installed.
-   Validate a hand-written `pgdog.toml` against the pinned PgDog image. No CUE
-   renderers yet.
+   *Gate:* `kind` cluster is up, `kubectl get nodes -L topology.kubernetes.io/zone`
+   shows three distinct zones, operator pod is `Running`, and a hand-written
+   `pgdog.toml` has been validated against the pinned PgDog image. No CUE renderers
+   yet.
 1. **Model.** `schema.cue`, `topology.cue`, `fabric.cue`, and the renderers.
-   `cue vet` passes; `just render` produces committed golden output.
-2. **Shards.** CNPG clusters applied and healthy; placement assertions pass.
-3. **Proxy.** PgDog applied; seed and routing assertions pass.
+   *Gate:* `cue vet` passes and `just render` produces committed golden output.
+   This is the one milestone with no live-cluster gate, because it produces no
+   cluster state of its own.
+2. **Shards.** *Gate:* CNPG clusters applied and reporting healthy in a live
+   cluster; placement assertions (§6.3) pass against real pod placement.
+3. **Proxy.** *Gate:* PgDog applied and serving; seed and routing assertions (§6.4)
+   pass; the full acceptance sequence in §1 runs clean from `just down`.
