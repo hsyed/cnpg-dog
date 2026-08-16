@@ -109,6 +109,10 @@ shardedCluster: #ShardedCluster & {
         table:    "events"
         column:   "tenant_id"
         dataType: "bigint"
+    }, #ShardedTable & {
+        table:    "orders"
+        column:   "tenant_id"
+        dataType: "bigint"
     }]
 }
 ```
@@ -254,12 +258,15 @@ Four checks, cheapest first. All are wired into `just check` except `check-rende
 #ShardedTable: {
     table:    string
     column:   string
-    dataType: "bigint" | "uuid" | "text"
+    dataType: "bigint" | "uuid" | "varchar" | "vector"
 }
 ```
 
-This renders into `[[sharded_tables]]` and, to prevent drift from the DDL, also
-renders `sql/generated/assert_schema.sql` — a query against
+`shardedCluster.tables` is a list, and the POC demonstrates it with two tables
+(`events`, `orders`) sharing the `tenant_id` convention, so the comprehension
+that renders `[[sharded_tables]]` is exercised as a list rather than a
+list-of-one. This renders into `[[sharded_tables]]` and, to prevent drift from
+the DDL, also renders `rendered/assert_schema.sql` — a query against
 `information_schema.columns` that fails if the real column type differs from what
 PgDog was told. One fact, two consumers, no DDL generator.
 
