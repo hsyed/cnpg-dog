@@ -1,0 +1,66 @@
+[general]
+host = "0.0.0.0"
+port = 6432
+
+[[databases]]
+name = "dog"
+host = "dog-s0-rw"
+port = 5432
+role = "primary"
+shard = 0
+database_name = "dog"
+
+[[databases]]
+name = "dog"
+host = "dog-s1-rw"
+port = 5432
+role = "primary"
+shard = 1
+database_name = "dog"
+
+# 1. hash, column-only
+[[sharded_tables]]
+database = "dog"
+column = "tenant_id"
+data_type = "bigint"
+
+# 2. hash, table+column
+[[sharded_tables]]
+database = "dog"
+name = "users"
+column = "company_id"
+data_type = "uuid"
+
+# 3. list
+[[sharded_tables]]
+database = "dog"
+column = "user_id"
+data_type = "bigint"
+
+[[sharded_tables.mapping]]
+values = [1, 2, 3]
+shard = 0
+
+# 4. range + fallback
+[[sharded_tables]]
+database = "dog"
+column = "order_id"
+data_type = "bigint"
+
+[[sharded_tables.mapping]]
+start = 1
+end = 100
+shard = 0
+
+[[sharded_tables.mapping]]
+shard = 1
+
+# 5. schema-based + default
+[[sharded_schemas]]
+database = "dog"
+name = "customer_a"
+shard = 0
+
+[[sharded_schemas]]
+database = "dog"
+shard = 1

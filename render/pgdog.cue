@@ -27,6 +27,30 @@ _pgdogConfig: {
 		database:  lib.fabric.shardedCluster.name
 		column:    c.column
 		data_type: c.dataType
+		if c.name != _|_ {
+			name: c.name
+		}
+		if c.mapping != _|_ {
+			mapping: [for m in c.mapping {
+				shard: m.shard
+				if m.values != _|_ {
+					values: m.values
+				}
+				if m.start != _|_ {
+					start: m.start
+				}
+				if m.end != _|_ {
+					end: m.end
+				}
+			}]
+		}
+	}]
+	sharded_schemas: [for s in lib.fabric.shardedSchemas {
+		database: lib.fabric.shardedCluster.name
+		shard:    s.shard
+		if s.name != _|_ {
+			name: s.name
+		}
 	}]
 }
 

@@ -286,10 +286,60 @@ items:
         port = 6432
         workers = 2
 
+        [[sharded_schemas]]
+        database = 'dog'
+        name = 'customer_a'
+        shard = 0
+
+        [[sharded_schemas]]
+        database = 'dog'
+        name = 'customer_b'
+        shard = 1
+
         [[sharded_tables]]
         column = 'tenant_id'
         data_type = 'bigint'
         database = 'dog'
+
+        [[sharded_tables]]
+        column = 'company_id'
+        data_type = 'uuid'
+        database = 'dog'
+        name = 'users'
+
+        [[sharded_tables]]
+        column = 'region'
+        data_type = 'varchar'
+        database = 'dog'
+
+        [[sharded_tables.mapping]]
+        shard = 0
+        values = ['us', 'ca']
+
+        [[sharded_tables.mapping]]
+        shard = 1
+        values = ['eu']
+
+        [[sharded_tables.mapping]]
+        shard = 2
+
+        [[sharded_tables]]
+        column = 'order_id'
+        data_type = 'bigint'
+        database = 'dog'
+
+        [[sharded_tables.mapping]]
+        end = 100
+        shard = 0
+        start = 1
+
+        [[sharded_tables.mapping]]
+        end = 200
+        shard = 1
+        start = 100
+
+        [[sharded_tables.mapping]]
+        shard = 2
   - apiVersion: apps/v1
     kind: Deployment
     metadata:

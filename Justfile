@@ -37,12 +37,15 @@ check-manifests: render
 check-pgdog-config: render
     yq -r '.items[] | select(.kind == "ConfigMap" and .metadata.name == "pgdog") | .data["pgdog.toml"]' rendered/manifests.yaml > /tmp/pgdog-rendered.toml
     test "$(grep -c '^\[\[databases\]\]' /tmp/pgdog-rendered.toml)" = "8"
-    test "$(grep -c '^\[\[sharded_tables\]\]' /tmp/pgdog-rendered.toml)" = "1"
-    grep -q 'shard = 3' /tmp/pgdog-rendered.toml
-    grep -q "host = 'dog-s3-read'" /tmp/pgdog-rendered.toml
+    test "$(grep -c '^\[\[sharded_tables\]\]' /tmp/pgdog-rendered.toml)" = "4"
+    test "$(grep -c '^\[\[sharded_tables\.mapping\]\]' /tmp/pgdog-rendered.toml)" = "6"
+    test "$(grep -c '^\[\[sharded_schemas\]\]' /tmp/pgdog-rendered.toml)" = "2"
     grep -q "column = 'tenant_id'" /tmp/pgdog-rendered.toml
-    grep -q "data_type = 'bigint'" /tmp/pgdog-rendered.toml
-    @echo "PASS: 8 database entries (4 shards x primary+replica), column-based sharding on tenant_id"
+    grep -q "name = 'users'" /tmp/pgdog-rendered.toml
+    grep -q "name = 'customer_a'" /tmp/pgdog-rendered.toml
+    grep -q "values = \['us', 'ca'\]" /tmp/pgdog-rendered.toml
+    grep -q 'start = 1' /tmp/pgdog-rendered.toml
+    @echo "PASS: 8 databases, 4 sharded_tables (hash/list/range), 2 sharded_schemas"
 
 # Re-render and fail if committed output is stale, or if the kind fixture drifted
 check-render: render

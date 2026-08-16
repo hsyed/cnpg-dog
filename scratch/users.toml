@@ -1,0 +1,4 @@
+[[users]]
+name = "dog"
+database = "dog"
+password = "dogpassword"

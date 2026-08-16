@@ -252,22 +252,37 @@ Four checks, cheapest first. All are wired into `just check` except `check-rende
 
 ### Schema contract
 
-`sql/schema.sql` is hand-written DDL. CUE holds only the fact PgDog needs:
+`sql/schema.sql` is hand-written DDL. CUE holds only the sharding facts PgDog
+needs, and models the full sharding-function surface:
 
 ```cue
-#ShardedColumn: {
+#ShardedColumn: {          // column-based; name omitted = every table with this column
+    name?:    string
     column:   string
-    dataType: "bigint" | "uuid" | "varchar" | "vector"
+    dataType: "bigint" | "uuid" | "varchar"
+    mapping?: [...#ShardMapping]   // omit = hash; else list/range/default rules
+}
+
+#ShardMapping: {           // kind inferred like PgDog: values=list, start/end=range, shard-only=default
+    shard:   int & >=0
+    values?: [...int] | [...string]
+    start?:  int | string
+    end?:    int | string
+}
+
+#ShardedSchema: {          // schema-based; name omitted = default routing
+    name?:  string
+    shard:  int & >=0
 }
 ```
 
-Sharding is column-based, not table-based: omitting the table name tells PgDog
-every table with that column is sharded on it, which is the idiomatic
-tenant-key pattern and keeps the config short. This renders into
-`[[sharded_tables]]` (with `name` omitted) and, to prevent drift from the DDL,
-also renders `rendered/assert_schema.sql` — a query against
-`information_schema.columns` that fails if any table's sharding column differs
-from the type PgDog was told. One fact, two consumers, no DDL generator.
+This renders into `[[sharded_tables]]` (hash/list/range with nested
+`[[sharded_tables.mapping]]`) and `[[sharded_schemas]]`, and, to prevent drift
+from the DDL, also renders `rendered/assert_schema.sql` — a query per sharded
+column against `information_schema.columns` that fails if the column's type
+differs from what PgDog was told (mapping PgDog's `varchar` to Postgres's
+`character varying`/`text`, and `bigint` to `integer`/`smallint`). One fact,
+two consumers, no DDL generator.
 
 ## 7. Argo CD readiness
 

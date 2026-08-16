@@ -11,6 +11,7 @@ _shardedCluster: cnpgdog.shardedCluster & #ShardedCluster
 fabric: #Fabric & {
 	shardedCluster: _shardedCluster
 	shardedColumns: _shardedCluster.shardedColumns
+	shardedSchemas: _shardedCluster.shardedSchemas
 	shards: [for i in list.Range(0, _shardedCluster.shards, 1) {
 		id:      i
 		cluster: "\(_shardedCluster.name)-s\(i)"

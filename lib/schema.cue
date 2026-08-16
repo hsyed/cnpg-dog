@@ -7,14 +7,32 @@ package lib
 	pgVersion: string
 	storage:   string
 	shardedColumns: [...#ShardedColumn]
+	shardedSchemas: [...#ShardedSchema]
 }
 
-// #ShardedColumn is the one fact PgDog needs about the schema: every table
-// with this column (of this type) is sharded on it. Consumed twice: by
-// pgdog.toml and by the generated schema assertion.
+// #ShardedColumn is column-based sharding. The function is inferred from the
+// mapping, exactly like PgDog: no mapping = hash; `values` = list; `start`/`end`
+// = range; `shard` only = default fallback. `name` omitted = every table with
+// this column; `name` set = only that table.
 #ShardedColumn: {
+	name?:    string
 	column:   string
-	dataType: "bigint" | "uuid" | "varchar" | "vector"
+	dataType: "bigint" | "uuid" | "varchar"
+	mapping?: [...#ShardMapping]
+}
+
+// #ShardMapping is one value->shard rule.
+#ShardMapping: {
+	shard:                          int & >=0
+	values?: [...int] | [...string] // list rule
+	start?:                         int | string // range rule (inclusive)
+	end?:                           int | string // range rule (exclusive)
+}
+
+// #ShardedSchema is schema-based sharding. `name` omitted = default routing.
+#ShardedSchema: {
+	name?: string
+	shard: int & >=0
 }
 
 // #Shard is a single derived shard. Every name in the system comes from here;
@@ -31,4 +49,5 @@ package lib
 	shardedCluster: #ShardedCluster
 	shards: [...#Shard]
 	shardedColumns: [...#ShardedColumn]
+	shardedSchemas: [...#ShardedSchema]
 }
