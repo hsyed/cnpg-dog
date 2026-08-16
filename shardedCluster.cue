@@ -8,6 +8,7 @@ shardedCluster: {
 	shards:    4
 	pgVersion: "18"
 	storage:   "1Gi"
+	zones: ["a", "b", "c"]
 	shardedColumns: [{
 		column:   "tenant_id"
 		dataType: "bigint"

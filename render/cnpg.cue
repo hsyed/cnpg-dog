@@ -16,7 +16,7 @@ _clusters: [for s in lib.fabric.shards {
 			annotations: "argocd.argoproj.io/sync-wave": "1"
 		}
 		spec: {
-			instances: len(zones)
+			instances: len(lib.fabric.shardedCluster.zones)
 			imageName: "ghcr.io/cloudnative-pg/postgresql:\(lib.fabric.shardedCluster.pgVersion)"
 			storage: size: lib.fabric.shardedCluster.storage
 			bootstrap: initdb: {

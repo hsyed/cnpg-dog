@@ -11,6 +11,7 @@ import (
 	shards:    int & >=1
 	pgVersion: string
 	storage:   string
+	zones: [...string] & [_, ...]
 	shardedColumns: [...#ShardedColumn]
 }
 

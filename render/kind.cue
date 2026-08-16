@@ -1,6 +1,9 @@
 package render
 
-import "list"
+import (
+	"list"
+	"github.com/hsyed/cnpg-dog/lib"
+)
 
 kindConfig: {
 	kind:       "Cluster"
@@ -8,7 +11,7 @@ kindConfig: {
 	name:       "cnpg-dog"
 	nodes: list.Concat([[
 		{role: "control-plane"},
-	], [for z in zones {
+	], [for z in lib.fabric.shardedCluster.zones {
 		role: "worker"
 		labels: "topology.kubernetes.io/zone": z
 	}]])
