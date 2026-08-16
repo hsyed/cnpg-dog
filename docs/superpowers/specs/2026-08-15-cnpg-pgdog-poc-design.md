@@ -184,8 +184,9 @@ cue.mod/
   gen/                 vendored k8s + CNPG schemas
 shardedCluster.cue     the knobs (shardedCluster + its shardedColumns)
 lib/
-  fabric.cue           #ShardedCluster/#ShardedColumn/#Shard/#Fabric + derivation
-  schema.cue           POC-grade k8s + CNPG partial schemas
+  schema.cue           #ShardedCluster/#ShardedColumn/#Shard/#Fabric
+  fabric.cue           derivation (topology -> fabric)
+  k8s.cue              POC-grade k8s + CNPG partial schemas
 render/
   zones.cue            placement (availability zones)
   cnpg.cue             Cluster CRs + read Services

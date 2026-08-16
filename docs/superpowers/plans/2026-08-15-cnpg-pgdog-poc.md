@@ -37,10 +37,11 @@ file at the root and a single machinery directory:
   knobs, pure values, no schemas and no imports: `shardedCluster` (with a
   `shardedColumns` subsection). The only file edited day to day.
 - `lib/` (`package lib`) — the schemas (`#ShardedCluster`, `#ShardedColumn`,
-  `#Shard`, `#Fabric`), the `fabric` derivation (`lib/fabric.cue`), and the
-  POC-grade k8s/CNPG partial schemas (`lib/schema.cue`). Imports the root
-  package as `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required
-  because the module path ends in a hyphen).
+  `#Shard`, `#Fabric`) in `lib/schema.cue`, the `fabric` derivation
+  (`lib/fabric.cue`), and the POC-grade k8s/CNPG partial schemas
+  (`lib/k8s.cue`). Imports the root package as
+  `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required because the
+  module path ends in a hyphen).
 - `render/` (`package render`) — placement (`render/zones.cue`) and the
   renderers + exports (`kindConfig`, `namespace`, `manifests`, `secrets`,
   `assertSchema`). Imports `lib`.
