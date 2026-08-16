@@ -105,17 +105,16 @@ shardedCluster: #ShardedCluster & {
     shards:    4
     pgVersion: "18"
     storage:   "1Gi"
-    tables: [#ShardedTable & {
-        table:    "events"
-        column:   "tenant_id"
-        dataType: "bigint"
-    }, #ShardedTable & {
-        table:    "orders"
+    shardedColumns: [#ShardedColumn & {
         column:   "tenant_id"
         dataType: "bigint"
     }]
 }
 ```
+
+Sharding is by column, not by table: omitting the table name tells PgDog every
+table with a `tenant_id` column is sharded on it. The DDL (`sql/schema.sql`)
+owns the list of tables; CUE owns only the sharding-key fact.
 
 ### Layer 2 — fabric
 
@@ -183,9 +182,9 @@ Justfile               the verbs
 cue.mod/
   module.cue
   gen/                 vendored k8s + CNPG schemas
-shardedCluster.cue     the knobs (shardedCluster + its tables subsection)
+shardedCluster.cue     the knobs (shardedCluster + its shardedColumns)
 lib/
-  fabric.cue           #ShardedCluster/#ShardedTable/#Shard/#Fabric + derivation
+  fabric.cue           #ShardedCluster/#ShardedColumn/#Shard/#Fabric + derivation
   schema.cue           POC-grade k8s + CNPG partial schemas
 render/
   zones.cue            placement (availability zones)
@@ -255,20 +254,19 @@ Four checks, cheapest first. All are wired into `just check` except `check-rende
 `sql/schema.sql` is hand-written DDL. CUE holds only the fact PgDog needs:
 
 ```cue
-#ShardedTable: {
-    table:    string
+#ShardedColumn: {
     column:   string
     dataType: "bigint" | "uuid" | "varchar" | "vector"
 }
 ```
 
-`shardedCluster.tables` is a list, and the POC demonstrates it with two tables
-(`events`, `orders`) sharing the `tenant_id` convention, so the comprehension
-that renders `[[sharded_tables]]` is exercised as a list rather than a
-list-of-one. This renders into `[[sharded_tables]]` and, to prevent drift from
-the DDL, also renders `rendered/assert_schema.sql` — a query against
-`information_schema.columns` that fails if the real column type differs from what
-PgDog was told. One fact, two consumers, no DDL generator.
+Sharding is column-based, not table-based: omitting the table name tells PgDog
+every table with that column is sharded on it, which is the idiomatic
+tenant-key pattern and keeps the config short. This renders into
+`[[sharded_tables]]` (with `name` omitted) and, to prevent drift from the DDL,
+also renders `rendered/assert_schema.sql` — a query against
+`information_schema.columns` that fails if any table's sharding column differs
+from the type PgDog was told. One fact, two consumers, no DDL generator.
 
 ## 7. Argo CD readiness
 

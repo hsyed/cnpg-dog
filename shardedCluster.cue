@@ -8,12 +8,7 @@ shardedCluster: {
 	shards:    4
 	pgVersion: "18"
 	storage:   "1Gi"
-	tables: [{
-		table:    "events"
-		column:   "tenant_id"
-		dataType: "bigint"
-	}, {
-		table:    "orders"
+	shardedColumns: [{
 		column:   "tenant_id"
 		dataType: "bigint"
 	}]

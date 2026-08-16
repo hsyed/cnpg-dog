@@ -6,8 +6,8 @@ import (
 )
 
 // Key names are verified against the pinned image — see docs/reference/pgdog-config.md.
-// Notably: sharded_tables uses `name` (the table name), NOT `table`; the data_type
-// enum is bigint|uuid|varchar|vector; and the binary requires the `run` subcommand.
+// Notably: omitting `name` in sharded_tables shards every table with the column;
+// the data_type enum is bigint|uuid|varchar|vector; the binary needs `run`.
 
 // Injected by the render recipe: `-t pgdogImage="${PGDOG_IMAGE}"`.
 _pgdogImage: string @tag(pgdogImage)
@@ -23,11 +23,10 @@ _pgdogConfig: {
 		{name: s.db, host: s.rw, port: 5432, role: "primary", shard: s.id, database_name: s.db},
 		{name: s.db, host: s.ro, port: 5432, role: "replica", shard: s.id, database_name: s.db},
 	] {e}]
-	sharded_tables: [for t in lib.fabric.tables {
+	sharded_tables: [for c in lib.fabric.shardedColumns {
 		database:  lib.fabric.shardedCluster.name
-		name:      t.table
-		column:    t.column
-		data_type: t.dataType
+		column:    c.column
+		data_type: c.dataType
 	}]
 }
 

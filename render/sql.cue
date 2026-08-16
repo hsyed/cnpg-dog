@@ -5,19 +5,19 @@ import (
 	"github.com/hsyed/cnpg-dog/lib"
 )
 
-// assertSchema renders to rendered/assert_schema.sql: a query that fails if the
-// real column type drifts from what PgDog was told (lib.fabric.tables).
+// assertSchema renders to rendered/assert_schema.sql: a query that fails if any
+// table's sharding column drifts from the type PgDog was told
+// (lib.fabric.shardedColumns).
 assertSchema: {
-	_lines: [for t in lib.fabric.tables {
+	_lines: [for c in lib.fabric.shardedColumns {
 		"""
 		DO $$ BEGIN
-		  IF NOT EXISTS (
+		  IF EXISTS (
 		    SELECT 1 FROM information_schema.columns
-		    WHERE table_name = '\(t.table)'
-		      AND column_name = '\(t.column)'
-		      AND data_type = '\(t.dataType)'
+		    WHERE column_name = '\(c.column)'
+		      AND data_type <> '\(c.dataType)'
 		  ) THEN
-		    RAISE EXCEPTION 'sharding key \(t.table).\(t.column) is not \(t.dataType)';
+		    RAISE EXCEPTION 'sharding column \(c.column) is not \(c.dataType)';
 		  END IF;
 		END $$;
 		"""

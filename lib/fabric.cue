@@ -11,13 +11,13 @@ import (
 	shards:    int & >=1
 	pgVersion: string
 	storage:   string
-	tables: [...#ShardedTable]
+	shardedColumns: [...#ShardedColumn]
 }
 
-// #ShardedTable is the one fact PgDog needs about the schema. Consumed twice:
-// by pgdog.toml and by the generated schema assertion.
-#ShardedTable: {
-	table:    string
+// #ShardedColumn is the one fact PgDog needs about the schema: every table
+// with this column (of this type) is sharded on it. Consumed twice: by
+// pgdog.toml and by the generated schema assertion.
+#ShardedColumn: {
 	column:   string
 	dataType: "bigint" | "uuid" | "varchar" | "vector"
 }
@@ -35,7 +35,7 @@ import (
 #Fabric: {
 	shardedCluster: #ShardedCluster
 	shards: [...#Shard]
-	tables: [...#ShardedTable]
+	shardedColumns: [...#ShardedColumn]
 }
 
 // The raw values from the root, validated against their schemas.
@@ -43,7 +43,7 @@ _shardedCluster: cnpgdog.shardedCluster & #ShardedCluster
 
 fabric: #Fabric & {
 	shardedCluster: _shardedCluster
-	tables:         _shardedCluster.tables
+	shardedColumns: _shardedCluster.shardedColumns
 	shards: [for i in list.Range(0, _shardedCluster.shards, 1) {
 		id:      i
 		cluster: "\(_shardedCluster.name)-s\(i)"

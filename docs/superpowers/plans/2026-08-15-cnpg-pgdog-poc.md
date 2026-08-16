@@ -35,8 +35,8 @@ file at the root and a single machinery directory:
 
 - `shardedCluster.cue` (repo root, `package cnpgdog`) — the sharded-cluster
   knobs, pure values, no schemas and no imports: `shardedCluster` (with a
-  `tables` subsection). The only file edited day to day.
-- `lib/` (`package lib`) — the schemas (`#ShardedCluster`, `#ShardedTable`,
+  `shardedColumns` subsection). The only file edited day to day.
+- `lib/` (`package lib`) — the schemas (`#ShardedCluster`, `#ShardedColumn`,
   `#Shard`, `#Fabric`), the `fabric` derivation (`lib/fabric.cue`), and the
   POC-grade k8s/CNPG partial schemas (`lib/schema.cue`). Imports the root
   package as `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required
