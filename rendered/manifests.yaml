@@ -291,6 +291,12 @@ items:
         data_type = 'bigint'
         database = 'dog'
         name = 'events'
+
+        [[sharded_tables]]
+        column = 'tenant_id'
+        data_type = 'bigint'
+        database = 'dog'
+        name = 'orders'
   - apiVersion: apps/v1
     kind: Deployment
     metadata:

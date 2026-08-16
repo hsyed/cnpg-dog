@@ -12,5 +12,9 @@ shardedCluster: {
 		table:    "events"
 		column:   "tenant_id"
 		dataType: "bigint"
+	}, {
+		table:    "orders"
+		column:   "tenant_id"
+		dataType: "bigint"
 	}]
 }

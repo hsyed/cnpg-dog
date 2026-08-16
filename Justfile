@@ -37,10 +37,12 @@ check-manifests: render
 check-pgdog-config: render
     yq -r '.items[] | select(.kind == "ConfigMap" and .metadata.name == "pgdog") | .data["pgdog.toml"]' rendered/manifests.yaml > /tmp/pgdog-rendered.toml
     test "$(grep -c '^\[\[databases\]\]' /tmp/pgdog-rendered.toml)" = "8"
+    test "$(grep -c '^\[\[sharded_tables\]\]' /tmp/pgdog-rendered.toml)" = "2"
     grep -q 'shard = 3' /tmp/pgdog-rendered.toml
     grep -q "host = 'dog-s3-read'" /tmp/pgdog-rendered.toml
     grep -q "name = 'events'" /tmp/pgdog-rendered.toml
-    @echo "PASS: 8 database entries (4 shards x primary+replica), sharded events table"
+    grep -q "name = 'orders'" /tmp/pgdog-rendered.toml
+    @echo "PASS: 8 database entries (4 shards x primary+replica), 2 sharded tables"
 
 # Re-render and fail if committed output is stale, or if the kind fixture drifted
 check-render: render
