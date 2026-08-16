@@ -67,7 +67,7 @@ _pgdogDeployment: lib.#Deployment & {
 		annotations: "argocd.argoproj.io/sync-wave": "2"
 	}
 	spec: {
-		replicas: len(lib.fabric.shardedCluster.zones)
+		replicas: len(zones)
 		selector: matchLabels: app: "pgdog"
 		template: {
 			metadata: labels: app: "pgdog"

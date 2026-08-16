@@ -105,7 +105,6 @@ shardedCluster: #ShardedCluster & {
     shards:    4
     pgVersion: "18"
     storage:   "1Gi"
-    zones:     ["a", "b", "c"]
     shardedColumns: [#ShardedColumn & {
         column:   "tenant_id"
         dataType: "bigint"
@@ -113,15 +112,15 @@ shardedCluster: #ShardedCluster & {
 }
 ```
 
-One value describes the whole fabric. Sharding is by column, not by table:
-omitting the table name tells PgDog every table with a `tenant_id` column is
-sharded on it. The DDL (`sql/schema.sql`) owns the list of tables; CUE owns
-only the sharding-key fact.
+Sharding is by column, not by table: omitting the table name tells PgDog every
+table with a `tenant_id` column is sharded on it. The DDL (`sql/schema.sql`)
+owns the list of tables; CUE owns only the sharding-key fact.
 
 ### Layer 2 — fabric
 
 Derives the names. Nothing else in the repo constructs a service name by string
-concatenation.
+concatenation. Placement (`zones`) is not part of the fabric — it lives in the
+render layer.
 
 ```cue
 fabric: #Fabric & {
@@ -183,12 +182,12 @@ Justfile               the verbs
 cue.mod/
   module.cue
   gen/                 vendored k8s + CNPG schemas
-shardedCluster.cue     the knobs (shardedCluster: name, shards, zones, storage,
-                       pgVersion, shardedColumns)
+shardedCluster.cue     the knobs (shardedCluster + its shardedColumns)
 lib/
   fabric.cue           #ShardedCluster/#ShardedColumn/#Shard/#Fabric + derivation
   schema.cue           POC-grade k8s + CNPG partial schemas
 render/
+  zones.cue            placement (availability zones)
   cnpg.cue             Cluster CRs + read Services
   pgdog.cue            ConfigMap(pgdog.toml) + Deployment + Service
   kind.cue             kind cluster config

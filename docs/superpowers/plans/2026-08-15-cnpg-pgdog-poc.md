@@ -33,17 +33,17 @@ The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. Thi
 CUE packages are directory-scoped, so the layout is two packages: a values
 file at the root and a single machinery directory:
 
-- `shardedCluster.cue` (repo root, `package cnpgdog`) — the single top-level
-  value, pure values, no schemas and no imports: `shardedCluster` (name,
-  shards, pgVersion, storage, `zones`, `shardedColumns`). The only file edited
-  day to day.
+- `shardedCluster.cue` (repo root, `package cnpgdog`) — the sharded-cluster
+  knobs, pure values, no schemas and no imports: `shardedCluster` (with a
+  `shardedColumns` subsection). The only file edited day to day.
 - `lib/` (`package lib`) — the schemas (`#ShardedCluster`, `#ShardedColumn`,
   `#Shard`, `#Fabric`), the `fabric` derivation (`lib/fabric.cue`), and the
   POC-grade k8s/CNPG partial schemas (`lib/schema.cue`). Imports the root
   package as `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required
   because the module path ends in a hyphen).
-- `render/` (`package render`) — the renderers and exports (`kindConfig`,
-  `namespace`, `manifests`, `secrets`, `assertSchema`). Imports `lib`.
+- `render/` (`package render`) — placement (`render/zones.cue`) and the
+  renderers + exports (`kindConfig`, `namespace`, `manifests`, `secrets`,
+  `assertSchema`). Imports `lib`.
 
 The `just render` recipes export from `./render` (`cue export -e kindConfig
 ./render`).
