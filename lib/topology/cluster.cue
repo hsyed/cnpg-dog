@@ -1,6 +1,6 @@
-package schema
+package topology
 
-import "github.com/hsyed/cnpg-dog/lib/schema/upstream"
+import "github.com/hsyed/cnpg-dog/lib/topology/upstream"
 
 // Only deployment policy and routing rules are ours. Storage, resources, and
 // affinity use the native CNPG/Kubernetes types without parallel wrappers.

@@ -46,7 +46,7 @@ to **one shard of the same topology**. There is no separate unsharded mode.
 shard, including the primary; `dog.replicas` is the independent total proxy count.
 
 ```cue
-topology: schema.#Topology & {
+topology: topologyTypes.#Topology & {
     name: "dog"
     pg: {
         shards:   1 // Default; the routing model is identical at every count.
@@ -153,33 +153,24 @@ PVC requests also do not impose a filesystem quota on kind's local-path storage.
 deployment. Do not apply the reduced storage request to an existing cluster or
 delete/recreate the cluster unless its data is disposable or backed up.
 
-The root `kind` block uses kind's native configuration surface:
+Local test-environment fixtures live under `tests/local/`, separate from the
+reusable CUE libraries. kind is configured in plain `tests/local/kind.yaml`, not
+in CUE. Edit that file directly for native networking, nodes, labels, mounts,
+ports, or kubeadm patches.
+The local fixture has one control-plane and three worker nodes in zones a/b/c.
+It is not derived from database or proxy counts: adjust the node configuration
+yourself when changing capacity or placement requirements.
 
-```cue
-kind: {
-    name: "cnpg-dog"
-    networking: {
-        apiServerAddress: "127.0.0.1"
-        ipFamily: "ipv4"
-    }
-    // Optional: nodes, featureGates, runtimeConfig, kubeadmConfigPatches, etc.
-}
-```
-
-Omit `nodes` for the generated three-zone fixture with enough workers for the
-configured pod counts. Supplying `nodes` replaces that fixture entirely, so
-native labels, mounts, port mappings, and per-node patches can be configured
-without merging against generated nodes. There is no handwritten kind schema:
-kind validates its native API at cluster creation. It remains your responsibility
-to provide nodes that satisfy the CNPG/PgDog placement policy.
-
-`just up` uses `rendered/kind.yaml`, and cluster selection/deletion derive the name
-from that configuration rather than a separate environment variable. Recreate
-kind only when its creation-time settings need to change.
+`just up` reads `tests/local/kind.yaml`; cluster selection/deletion derive the
+name from that same file. `just seed` reads the hand-written schema and seed data
+from `tests/local/sql/`. These are disposable test fixtures, not production
+migrations: the schema script drops and recreates its test tables.
+CUE renders application resources and generated schema assertions under
+`rendered/`. Recreate kind only when its creation-time settings need to change.
 
 ### Native schemas and validation
 
-`lib/schema/upstream/*_gen.cue` is generated from the Kubernetes OpenAPI schema
+`lib/topology/upstream/*_gen.cue` is generated from the Kubernetes OpenAPI schema
 matching `KIND_NODE_IMAGE` and the CNPG CRD in `CNPG_MANIFEST`. Regenerate with
 `just update-schemas` inside the devShell after changing those pins. Ordinary
 rendering and tests use the checked-in definitions and need no network.
@@ -193,7 +184,6 @@ is not a substitute for the API server.
 compatibility, single-instance PostgreSQL, native template passthrough, and
 invalid inputs. Live checks follow the declared native CNPG anti-affinity and
 required synchronous policy, accepting both `sync` and `quorum` replica states.
-The offline tests also verify native kind networking and explicit-node overrides.
 `just check-render` compares a fresh render with the working-tree golden files
 without overwriting them, so reviewed uncommitted snapshot updates work too.
 The live seed/routing test still uses the POC's `dog` database and 400-row fixture.
@@ -228,15 +218,21 @@ topology.cue                user configuration: topology.pg / topology.dog
 outputs.cue                 root composition and public exports
 lib/
   topology.cue             validated configuration → shard names and endpoints
-  schema/
+  topology/
     cluster.cue            cluster, shard, topology, and routing definitions
     kubernetes.cue         aliases to native upstream resource types
     upstream/              generated Kubernetes/CNPG definitions
   render/
     cnpg.cue               CNPG clusters and read services
     pgdog.cue              PgDog configuration and deployment
-    kind.cue               local Kubernetes topology
     namespace.cue          namespace and credentials
     sql.cue                generated schema assertions
     manifests.cue          assembled output streams
+tests/
+  topology.cue             offline topology fixtures
+  local/
+    kind.yaml              independent local Kubernetes fixture (plain YAML)
+    sql/
+      schema.sql           disposable routing-test tables
+      seed.sql             400-row routing-test dataset
 ```

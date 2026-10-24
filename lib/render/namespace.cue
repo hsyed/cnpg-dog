@@ -1,11 +1,11 @@
 package render
 
-import "github.com/hsyed/cnpg-dog/lib/schema"
+import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 
 #Output: {
 	topology: _
 
-	_namespace: schema.#Namespace & {
+	_namespace: topologyTypes.#Namespace & {
 		apiVersion: "v1"
 		kind:       "Namespace"
 		metadata: {
@@ -16,7 +16,7 @@ import "github.com/hsyed/cnpg-dog/lib/schema"
 	namespace: _namespace
 
 	// POC credentials. Export only through the gitignored secrets stream.
-	_appSecret: schema.#Secret & {
+	_appSecret: topologyTypes.#Secret & {
 		apiVersion: "v1"
 		kind:       "Secret"
 		type:       "kubernetes.io/basic-auth"

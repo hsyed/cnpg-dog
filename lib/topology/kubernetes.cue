@@ -1,6 +1,6 @@
-package schema
+package topology
 
-import "github.com/hsyed/cnpg-dog/lib/schema/upstream"
+import "github.com/hsyed/cnpg-dog/lib/topology/upstream"
 
 // Native upstream types, generated from the release pins in flake.nix.
 // Server-side dry-run still checks CEL, admission, and cluster-specific rules.

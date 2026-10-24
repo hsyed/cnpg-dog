@@ -3,11 +3,11 @@ package tests
 import (
 	"github.com/hsyed/cnpg-dog/lib"
 	"github.com/hsyed/cnpg-dog/lib/render"
-	"github.com/hsyed/cnpg-dog/lib/schema"
+	"github.com/hsyed/cnpg-dog/lib/topology"
 )
 
 #Case: {
-	config: schema.#Topology & {
+	config: topology.#Topology & {
 		name: "dog"
 		pg: template: spec: storage: size: "1Gi"
 	}
@@ -44,28 +44,6 @@ cases: {
 		config: {
 			pg: template: spec: instances: 1
 			dog: replicas: 1
-		}
-	}
-	localKind: #Case & {
-		output: kind: {
-			name: "custom-kind"
-			networking: {
-				apiServerAddress: "127.0.0.1"
-				apiServerPort:    16443
-				ipFamily:         "ipv4"
-			}
-			nodes: [
-				{role: "control-plane"},
-				{
-					role: "worker"
-					labels: "topology.kubernetes.io/zone": "local"
-					extraPortMappings: [{
-						containerPort: 30000
-						hostPort:      30000
-						protocol:      "TCP"
-					}]
-				},
-			]
 		}
 	}
 	nativeFields: #Case & {

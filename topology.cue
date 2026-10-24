@@ -1,10 +1,10 @@
 package cnpgdog
 
-import "github.com/hsyed/cnpg-dog/lib/schema"
+import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 
 // User configuration. Omit pg.shards for a singleton of the same shard topology.
 // This POC explicitly uses four shards to exercise the routing checks.
-topology: schema.#Topology & {
+topology: topologyTypes.#Topology & {
 	name: "dog"
 	pg: {
 		shards: 4
@@ -15,7 +15,7 @@ topology: schema.#Topology & {
 				instances: 3 // Includes the primary.
 				imageName: "ghcr.io/cloudnative-pg/postgresql:18"
 				// Small local POC, not production sizing. PVCs cannot shrink
-				// in-place: this size is for a fresh kind deployment.
+				// in-place: this size is for a fresh local deployment.
 				storage: size: "512Mi"
 				resources: {
 					requests: {cpu: "50m", memory: "128Mi"}
@@ -75,15 +75,5 @@ topology: schema.#Topology & {
 			{name: "customer_a", shard: 0},
 			{name: "customer_b", shard: 1},
 		]
-	}
-}
-
-// Native kind configuration. Omit nodes for the generated three-zone fixture,
-// or provide the complete native node list (labels, mounts, ports, patches).
-kind: {
-	name: "cnpg-dog"
-	networking: {
-		apiServerAddress: "127.0.0.1"
-		ipFamily:         "ipv4"
 	}
 }

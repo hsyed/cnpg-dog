@@ -1,6 +1,6 @@
 package render
 
-import "github.com/hsyed/cnpg-dog/lib/schema"
+import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 
 #Output: {
 	topology: _
@@ -29,7 +29,7 @@ import "github.com/hsyed/cnpg-dog/lib/schema"
 	}]
 
 	_readServices: [for s in topology.shards if topology.pg.template.spec.instances > 1 {
-		schema.#Service & {
+		topologyTypes.#Service & {
 			apiVersion: "v1"
 			kind:       "Service"
 			metadata: {

@@ -7,9 +7,9 @@ default:
 # Create the kind cluster and install the CNPG operator
 up: kind-up operator-up
 
-kind-up: render
-    kind create cluster --config rendered/kind.yaml --image "${KIND_NODE_IMAGE}" --wait 120s
-    kubectl config use-context "kind-$(yq -r '.name' rendered/kind.yaml)"
+kind-up:
+    kind create cluster --config tests/local/kind.yaml --image "${KIND_NODE_IMAGE}" --wait 120s
+    kubectl config use-context "kind-$(yq -r '.name // "kind"' tests/local/kind.yaml)"
 
 operator-up:
     kubectl apply --server-side -f "${CNPG_MANIFEST}"
@@ -33,7 +33,7 @@ check-render:
       bash scripts/render.sh "$tmp/rendered" "$tmp/secrets"; \
       diff -ru rendered "$tmp/rendered"
 
-# Exercise topology, native templates, and local kind configuration offline
+# Exercise topology and native templates offline
 check-topology:
     bash scripts/check-topology.sh
 
@@ -60,13 +60,13 @@ wait:
 seed: render
     kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
       --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
-      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < sql/schema.sql
+      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < tests/local/sql/schema.sql
     kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
       --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
       psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < rendered/assert_schema.sql
     kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
       --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
-      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < sql/seed.sql
+      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < tests/local/sql/seed.sql
 
 # Run all assertions
 check: check-render check-manifests check-pgdog-config check-topology
@@ -76,4 +76,4 @@ check: check-render check-manifests check-pgdog-config check-topology
 
 # Delete the kind cluster
 down:
-    kind delete cluster --name "$(cue export -e kindConfig.name --out text .)"
+    kind delete cluster --name "$(yq -r '.name // "kind"' tests/local/kind.yaml)"

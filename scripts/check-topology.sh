@@ -50,17 +50,12 @@ jq -e '
   (.singleInstance.output.manifests.items | all(
     if .kind == "Service" then (.metadata.name | endswith("-read") | not)
     else true end
-  )) and
-  .localKind.output.kindConfig.name == .localKind.output.kind.name and
-  .localKind.output.kindConfig.networking == .localKind.output.kind.networking and
-  .localKind.output.kindConfig.nodes == .localKind.output.kind.nodes and
-  ([.defaults.output.kindConfig.nodes[] | select(.role == "worker")] | length) == 3
+  ))
 ' "$tmp/cases.json" > /dev/null
 echo "PASS: native templates pass through; no implicit placement/replication policy"
 echo "PASS: one-to-four shards preserves the template, routing rules, and shard zero"
-echo "PASS: native kind settings and explicit nodes pass through without generated-node conflicts"
 
-for name in defaults singleton expanded singleInstance localKind nativeFields; do
+for name in defaults singleton expanded singleInstance nativeFields; do
   jq -r --arg name "$name" '
     .[$name].output.manifests.items[] |
     select(.kind == "ConfigMap" and .metadata.name == "pgdog") |

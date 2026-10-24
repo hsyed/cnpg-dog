@@ -2,7 +2,7 @@ package render
 
 import (
 	"encoding/toml"
-	"github.com/hsyed/cnpg-dog/lib/schema"
+	topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 )
 
 #Output: {
@@ -51,7 +51,7 @@ import (
 		database: topology.name
 		password: "dogpassword"
 	}]
-	_pgdogConfigMap: schema.#ConfigMap & {
+	_pgdogConfigMap: topologyTypes.#ConfigMap & {
 		apiVersion: "v1"
 		kind:       "ConfigMap"
 		metadata: {
@@ -61,7 +61,7 @@ import (
 		}
 		data: "pgdog.toml": toml.Marshal(_pgdogConfig)
 	}
-	_pgdogSecret: schema.#Secret & {
+	_pgdogSecret: topologyTypes.#Secret & {
 		apiVersion: "v1"
 		kind:       "Secret"
 		metadata: {
@@ -71,7 +71,7 @@ import (
 		}
 		stringData: "users.toml": toml.Marshal(_pgdogUsers)
 	}
-	_pgdogDeployment: schema.#Deployment & {
+	_pgdogDeployment: topologyTypes.#Deployment & {
 		apiVersion: "apps/v1"
 		kind:       "Deployment"
 		metadata: {
@@ -113,7 +113,7 @@ import (
 			}
 		}
 	}
-	_pgdogService: schema.#Service & {
+	_pgdogService: topologyTypes.#Service & {
 		apiVersion: "v1"
 		kind:       "Service"
 		metadata: {

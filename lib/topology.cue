@@ -2,14 +2,14 @@ package lib
 
 import (
 	"list"
-	"github.com/hsyed/cnpg-dog/lib/schema"
+	"github.com/hsyed/cnpg-dog/lib/topology"
 )
 
 // Pure derivation: the caller supplies configuration; libraries never import
 // the root package or depend on a particular deployment.
 #Topology: {
-	config: schema.#Topology
-	out: schema.#DerivedTopology & {
+	config: topology.#Topology
+	out: topology.#DerivedTopology & {
 		name: config.name
 		pg:   config.pg
 		dog:  config.dog

@@ -4,7 +4,6 @@ cd "$(dirname "$0")/.."
 output=${1:-rendered}
 secrets=${2:-rendered-secrets}
 mkdir -p "$output" "$secrets"
-cue export -e kindConfig --out yaml . > "$output/kind.yaml"
 cue export -e namespace --out yaml . > "$output/namespace.yaml"
 cue export -e manifests --out yaml -t "pgdogImage=${PGDOG_IMAGE:?}" . > "$output/manifests.yaml"
 cue export -e secrets --out yaml . > "$secrets/secrets.yaml"
