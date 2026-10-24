@@ -1,10 +1,18 @@
 # CNPG + PgDog Sharding POC Implementation Plan
 
+**Historical plan:** the implemented interface is now `topology.pg` /
+`topology.dog` in root `topology.cue`, composed by `outputs.cue`. The root imports
+pure libraries; libraries never import the root. Native schemas are generated
+from pinned upstream OpenAPI/CRDs. CNPG configuration lives under `pg.template`,
+and a singleton uses the same routing shape as multiple shards. The task steps
+and older layout notes below retain their historical
+names and assumptions; see `README.md` for the current configuration and commands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a local `kind` cluster running four CloudNativePG-managed Postgres shards spread across three simulated availability zones, fronted by PgDog for sharded routing, with the entire topology derived from a single CUE value.
 
-**Architecture:** Three pure layers in CUE — `topology.cue` (knobs) → `fabric.cue` (derived names and endpoints) → renderers (`render/*.cue`). Both the CNPG `Cluster` resources and PgDog's routing table are functions of the same `fabric` value, so they cannot drift. `cue export` produces plain YAML into `rendered/`, which `just` applies with `kubectl`. No Argo, no Helm, no Timoni.
+**Architecture:** Three pure layers in CUE — `shardedCluster.cue` (knobs) → `lib/topology.cue` (derived names and endpoints) → `lib/render/` (output construction), with independent definitions in `lib/schema/`. Both the CNPG `Cluster` resources and PgDog's routing table are functions of the same `topology` value, so they cannot drift. `cue export` produces plain YAML into `rendered/`, which `just` applies with `kubectl`. No Argo, no Helm, no Timoni.
 
 **Tech Stack:** CUE, Nix flakes, `just`, kind, CloudNativePG 1.30.0, PgDog v0.1.53, PostgreSQL 18.
 
@@ -30,27 +38,30 @@ The spec calls for `cue vet` against *vendored* Kubernetes and CNPG schemas. Thi
 
 ### Deviation from spec §5, recorded deliberately
 
-CUE packages are directory-scoped, so the layout is two packages: a values
-file at the root and a single machinery directory:
+CUE packages are directory-scoped. The root holds values, with all machinery
+under `lib/` and separate packages for definitions and renderers:
 
 - `shardedCluster.cue` (repo root, `package cnpgdog`) — the sharded-cluster
   knobs, pure values, no schemas and no imports: `shardedCluster` (with a
-  `shardedColumns` subsection). The only file edited day to day.
-- `lib/` (`package lib`) — the schemas (`#ShardedCluster`, `#ShardedColumn`,
-  `#Shard`, `#Fabric`) in `lib/schema.cue`, the `fabric` derivation
-  (`lib/fabric.cue`), and the POC-grade k8s/CNPG partial schemas
-  (`lib/k8s.cue`). Imports the root package as
-  `"github.com/hsyed/cnpg-dog:cnpgdog"` (the colon is required because the
-  module path ends in a hyphen).
-- `render/` (`package render`) — placement (`render/zones.cue`) and the
-  renderers + exports (`kindConfig`, `namespace`, `manifests`, `secrets`,
-  `assertSchema`). Imports `lib`.
+  `shardedColumns` subsection) and placement (`zones`). The only file edited
+  day to day.
+- `lib/schema/` (`package schema`) — cluster/routing definitions in
+  `cluster.cue` and POC-grade Kubernetes/CNPG partial schemas in
+  `kubernetes.cue`. No project imports.
+- `lib/` (`package lib`) — the validated `topology` derivation (`topology.cue`)
+  and placement passthrough in the same file. Imports the root values as
+  `"github.com/hsyed/cnpg-dog:cnpgdog"` and the schema package.
+- `lib/render/` (`package render`) — renderers and exports (`kindConfig`,
+  `namespace`, `manifests`, `secrets`, `assertSchema`). Imports the topology,
+  placement, and resource schemas.
 
-The `just render` recipes export from `./render` (`cue export -e kindConfig
-./render`).
+The `just render` recipes export from `./lib/render` (`cue export -e kindConfig
+./lib/render`). The task-by-task steps below retain their original implementation
+paths and terminology (`fabric`/`#Fabric`, now `topology`/`#Topology`); use the
+consolidated layout above for the current code.
 
 This preserves the spec's "one value read twice" property: renderers read
-`fabric`, they never re-derive a name.
+`topology`, they never re-derive a name.
 
 ---
 
@@ -62,18 +73,19 @@ flake.nix                     devShell + every version pin
 .gitignore                    excludes rendered-secrets/
 Justfile                      the verbs
 cue.mod/module.cue            CUE module definition
-schema/
-  k8s.cue                     #ConfigMap #Secret #Service #Deployment (partial, POC-grade)
-  cnpg.cue                    #CNPGCluster (partial, POC-grade)
-  topology.cue                #Topology #Shard #Fabric #ShardedTable
-topology.cue                  THE KNOBS — the only file edited day to day
-fabric.cue                    topology -> fabric derivation
-render/
-  kind.cue                    kind cluster config
-  cnpg.cue                    Cluster CRs + read Services
-  pgdog.cue                   ConfigMap(pgdog.toml) + Secret + Deployment + Service
-  namespace.cue               Namespace + app credentials Secret
-  manifests.cue               top-level export, sync-wave annotated
+shardedCluster.cue            THE KNOBS — the only file edited day to day
+lib/
+  topology.cue                validated configuration -> topology derivation
+  schema/
+    cluster.cue               #ShardedCluster #ShardedColumn #Shard #Topology
+    kubernetes.cue            Kubernetes + CNPG definitions (partial, POC-grade)
+  render/
+    kind.cue                  kind cluster config
+    cnpg.cue                  Cluster CRs + read Services
+    pgdog.cue                 ConfigMap(pgdog.toml) + Secret + Deployment + Service
+    namespace.cue             Namespace + app credentials Secret
+    manifests.cue             top-level export, sync-wave annotated
+    sql.cue                   generated schema assertions
 sql/
   schema.sql                  hand-written DDL
   seed.sql                    hand-written seed data

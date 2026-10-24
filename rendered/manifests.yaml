@@ -4,216 +4,254 @@ items:
   - apiVersion: v1
     kind: Namespace
     metadata:
-      name: dog
       annotations:
         argocd.argoproj.io/sync-wave: "0"
+      name: dog
   - apiVersion: postgresql.cnpg.io/v1
     kind: Cluster
     metadata:
+      labels:
+        app.kubernetes.io/part-of: cnpg-dog
       name: dog-s0
       namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "1"
     spec:
-      instances: 3
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
-      storage:
-        size: 1Gi
+      affinity:
+        podAntiAffinityType: required
+        topologyKey: topology.kubernetes.io/zone
       bootstrap:
         initdb:
           database: dog
           owner: dog
           secret:
             name: dog-app
+      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      instances: 3
       postgresql:
+        parameters:
+          shared_buffers: 32MB
+          max_connections: "64"
+          work_mem: 1MB
+          maintenance_work_mem: 16MB
+          autovacuum_work_mem: 8MB
+          min_wal_size: 32MB
+          max_wal_size: 64MB
+          jit: "off"
         synchronous:
-          method: first
+          dataDurability: required
+          method: any
           number: 1
-        syncReplicaElectionConstraint:
-          enabled: true
-          nodeLabelsAntiAffinity:
-            - topology.kubernetes.io/zone
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              cnpg.io/cluster: dog-s0
+      resources:
+        limits:
+          cpu: 250m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      storage:
+        size: 512Mi
   - apiVersion: postgresql.cnpg.io/v1
     kind: Cluster
     metadata:
+      labels:
+        app.kubernetes.io/part-of: cnpg-dog
       name: dog-s1
       namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "1"
     spec:
-      instances: 3
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
-      storage:
-        size: 1Gi
+      affinity:
+        podAntiAffinityType: required
+        topologyKey: topology.kubernetes.io/zone
       bootstrap:
         initdb:
           database: dog
           owner: dog
           secret:
             name: dog-app
+      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      instances: 3
       postgresql:
+        parameters:
+          shared_buffers: 32MB
+          max_connections: "64"
+          work_mem: 1MB
+          maintenance_work_mem: 16MB
+          autovacuum_work_mem: 8MB
+          min_wal_size: 32MB
+          max_wal_size: 64MB
+          jit: "off"
         synchronous:
-          method: first
+          dataDurability: required
+          method: any
           number: 1
-        syncReplicaElectionConstraint:
-          enabled: true
-          nodeLabelsAntiAffinity:
-            - topology.kubernetes.io/zone
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              cnpg.io/cluster: dog-s1
+      resources:
+        limits:
+          cpu: 250m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      storage:
+        size: 512Mi
   - apiVersion: postgresql.cnpg.io/v1
     kind: Cluster
     metadata:
+      labels:
+        app.kubernetes.io/part-of: cnpg-dog
       name: dog-s2
       namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "1"
     spec:
-      instances: 3
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
-      storage:
-        size: 1Gi
+      affinity:
+        podAntiAffinityType: required
+        topologyKey: topology.kubernetes.io/zone
       bootstrap:
         initdb:
           database: dog
           owner: dog
           secret:
             name: dog-app
+      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      instances: 3
       postgresql:
+        parameters:
+          shared_buffers: 32MB
+          max_connections: "64"
+          work_mem: 1MB
+          maintenance_work_mem: 16MB
+          autovacuum_work_mem: 8MB
+          min_wal_size: 32MB
+          max_wal_size: 64MB
+          jit: "off"
         synchronous:
-          method: first
+          dataDurability: required
+          method: any
           number: 1
-        syncReplicaElectionConstraint:
-          enabled: true
-          nodeLabelsAntiAffinity:
-            - topology.kubernetes.io/zone
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              cnpg.io/cluster: dog-s2
+      resources:
+        limits:
+          cpu: 250m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      storage:
+        size: 512Mi
   - apiVersion: postgresql.cnpg.io/v1
     kind: Cluster
     metadata:
+      labels:
+        app.kubernetes.io/part-of: cnpg-dog
       name: dog-s3
       namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "1"
     spec:
-      instances: 3
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
-      storage:
-        size: 1Gi
+      affinity:
+        podAntiAffinityType: required
+        topologyKey: topology.kubernetes.io/zone
       bootstrap:
         initdb:
           database: dog
           owner: dog
           secret:
             name: dog-app
+      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      instances: 3
       postgresql:
+        parameters:
+          shared_buffers: 32MB
+          max_connections: "64"
+          work_mem: 1MB
+          maintenance_work_mem: 16MB
+          autovacuum_work_mem: 8MB
+          min_wal_size: 32MB
+          max_wal_size: 64MB
+          jit: "off"
         synchronous:
-          method: first
+          dataDurability: required
+          method: any
           number: 1
-        syncReplicaElectionConstraint:
-          enabled: true
-          nodeLabelsAntiAffinity:
-            - topology.kubernetes.io/zone
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              cnpg.io/cluster: dog-s3
+      resources:
+        limits:
+          cpu: 250m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      storage:
+        size: 512Mi
   - apiVersion: v1
     kind: Service
     metadata:
-      name: dog-s0-read
-      namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "1"
+      name: dog-s0-read
+      namespace: dog
     spec:
-      type: ClusterIP
-      trafficDistribution: PreferSameZone
+      ports:
+        - name: postgres
+          port: 5432
+          targetPort: 5432
       selector:
         cnpg.io/cluster: dog-s0
         cnpg.io/instanceRole: replica
+      trafficDistribution: PreferSameZone
+      type: ClusterIP
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+      name: dog-s1-read
+      namespace: dog
+    spec:
       ports:
         - name: postgres
           port: 5432
           targetPort: 5432
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      name: dog-s1-read
-      namespace: dog
-      annotations:
-        argocd.argoproj.io/sync-wave: "1"
-    spec:
-      type: ClusterIP
-      trafficDistribution: PreferSameZone
       selector:
         cnpg.io/cluster: dog-s1
         cnpg.io/instanceRole: replica
+      trafficDistribution: PreferSameZone
+      type: ClusterIP
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+      name: dog-s2-read
+      namespace: dog
+    spec:
       ports:
         - name: postgres
           port: 5432
           targetPort: 5432
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      name: dog-s2-read
-      namespace: dog
-      annotations:
-        argocd.argoproj.io/sync-wave: "1"
-    spec:
-      type: ClusterIP
-      trafficDistribution: PreferSameZone
       selector:
         cnpg.io/cluster: dog-s2
         cnpg.io/instanceRole: replica
-      ports:
-        - name: postgres
-          port: 5432
-          targetPort: 5432
+      trafficDistribution: PreferSameZone
+      type: ClusterIP
   - apiVersion: v1
     kind: Service
     metadata:
-      name: dog-s3-read
-      namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "1"
+      name: dog-s3-read
+      namespace: dog
     spec:
-      type: ClusterIP
-      trafficDistribution: PreferSameZone
-      selector:
-        cnpg.io/cluster: dog-s3
-        cnpg.io/instanceRole: replica
       ports:
         - name: postgres
           port: 5432
           targetPort: 5432
+      selector:
+        cnpg.io/cluster: dog-s3
+        cnpg.io/instanceRole: replica
+      trafficDistribution: PreferSameZone
+      type: ClusterIP
   - apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: pgdog
-      namespace: dog
-      annotations:
-        argocd.argoproj.io/sync-wave: "2"
     data:
       pgdog.toml: |
         [[databases]]
@@ -340,13 +378,19 @@ items:
 
         [[sharded_tables.mapping]]
         shard = 2
+    kind: ConfigMap
+    metadata:
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+      name: pgdog
+      namespace: dog
   - apiVersion: apps/v1
     kind: Deployment
     metadata:
-      name: pgdog
-      namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "2"
+      name: pgdog
+      namespace: dog
     spec:
       replicas: 3
       selector:
@@ -357,53 +401,60 @@ items:
           labels:
             app: pgdog
         spec:
-          topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: topology.kubernetes.io/zone
-              whenUnsatisfiable: DoNotSchedule
-              labelSelector:
-                matchLabels:
-                  app: pgdog
           containers:
-            - name: pgdog
-              image: ghcr.io/pgdogdev/pgdog:v0.1.53
-              command:
-                - /usr/local/bin/pgdog
-              args:
+            - args:
                 - --config
                 - /etc/pgdog/pgdog.toml
                 - --users
                 - /etc/pgdog/users.toml
                 - run
+              command:
+                - /usr/local/bin/pgdog
+              image: ghcr.io/pgdogdev/pgdog:v0.1.53
+              name: pgdog
               ports:
                 - containerPort: 6432
                   name: pgdog
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+                requests:
+                  cpu: 25m
+                  memory: 32Mi
               volumeMounts:
-                - name: config
-                  mountPath: /etc/pgdog/pgdog.toml
+                - mountPath: /etc/pgdog/pgdog.toml
+                  name: config
                   subPath: pgdog.toml
-                - name: users
-                  mountPath: /etc/pgdog/users.toml
+                - mountPath: /etc/pgdog/users.toml
+                  name: users
                   subPath: users.toml
+          topologySpreadConstraints:
+            - labelSelector:
+                matchLabels:
+                  app: pgdog
+              maxSkew: 1
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: DoNotSchedule
           volumes:
-            - name: config
-              configMap:
+            - configMap:
                 name: pgdog
+              name: config
             - name: users
               secret:
                 secretName: pgdog-users
   - apiVersion: v1
     kind: Service
     metadata:
-      name: pgdog
-      namespace: dog
       annotations:
         argocd.argoproj.io/sync-wave: "2"
+      name: pgdog
+      namespace: dog
     spec:
-      type: ClusterIP
-      selector:
-        app: pgdog
       ports:
         - name: pgdog
           port: 6432
           targetPort: 6432
+      selector:
+        app: pgdog
+      type: ClusterIP

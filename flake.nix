@@ -11,6 +11,7 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             cue
+            curl
             just
             kind
             kubectl
@@ -25,7 +26,6 @@
           CNPG_MANIFEST = "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.30/releases/cnpg-1.30.0.yaml";
           PGDOG_IMAGE = "ghcr.io/pgdogdev/pgdog:v0.1.53";
           PG_IMAGE = "ghcr.io/cloudnative-pg/postgresql:18.4";
-          CLUSTER_NAME = "cnpg-dog";
           APP_NS = "dog";
         };
       });

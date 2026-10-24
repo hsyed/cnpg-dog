@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-Prove out a cloud-native Postgres fabric where [CloudNativePG](https://cloudnative-pg.io/)
+Prove out a cloud-native Postgres deployment where [CloudNativePG](https://cloudnative-pg.io/)
 manages the shards and [PgDog](https://pgdog.dev/) provides sharded routing in front of
 them, with the entire topology encoded in CUE.
 
@@ -73,17 +73,24 @@ additive rather than a rewrite (§7).
 
 ## 3. Architecture
 
+**Historical design:** current code uses `topology.pg` / `topology.dog` in root
+`topology.cue`, with composition in `outputs.cue` and generated upstream schemas.
+Explicit zone lists and the `shardedCluster` wrapper below have been replaced.
+CNPG policies now live in a native `pg.template`; one shard uses the same
+configuration and routing shape as many shards.
+See `README.md` for the implemented interface, defaults, and placement policy.
+
 Three layers, each a pure function of the previous one.
 
 ```
 shardedCluster.cue  the knobs — the only file edited day to day
       |
       v
-fabric.cue        every name and endpoint, derived exactly once
+lib/topology.cue  every name and endpoint, derived exactly once
       |
-      +--> lib/cnpg.cue    Cluster CRs + read Services
-      +--> lib/pgdog.cue   ConfigMap(pgdog.toml) + Deployment + Service
-      +--> lib/kind.cue    kind cluster config with zone labels
+      +--> lib/render/cnpg.cue    Cluster CRs + read Services
+      +--> lib/render/pgdog.cue   ConfigMap(pgdog.toml) + Deployment + Service
+      +--> lib/render/kind.cue    kind cluster config with zone labels
 ```
 
 ### The central claim
@@ -116,14 +123,14 @@ Sharding is by column, not by table: omitting the table name tells PgDog every
 table with a `tenant_id` column is sharded on it. The DDL (`sql/schema.sql`)
 owns the list of tables; CUE owns only the sharding-key fact.
 
-### Layer 2 — fabric
+### Layer 2 — topology
 
 Derives the names. Nothing else in the repo constructs a service name by string
-concatenation. Placement (`zones`) is not part of the fabric — it lives in the
-render layer.
+concatenation. Placement (`zones`) is configured alongside `shardedCluster` in
+the root values file and passed through by `lib/topology.cue` to the renderers.
 
 ```cue
-fabric: #Fabric & {
+topology: #Topology & {
     _t: shardedCluster
     shards: [for i in list.Range(0, _t.shards, 1) {
         id:      i
@@ -137,7 +144,7 @@ fabric: #Fabric & {
 
 ### Layer 3 — renderers
 
-`lib/cnpg.cue` emits, per shard:
+`lib/render/cnpg.cue` emits, per shard:
 
 - a `postgresql.cnpg.io/v1` `Cluster` with `instances: len(zones)`,
 - `spec.topologySpreadConstraints` on `topology.kubernetes.io/zone`, `maxSkew: 1`,
@@ -147,7 +154,7 @@ fabric: #Fabric & {
   elected outside the primary's zone,
 - a read `Service` carrying `spec.trafficDistribution: PreferSameZone`.
 
-`lib/pgdog.cue` emits `[[databases]]` — per shard, one `primary` entry pointing
+`lib/render/pgdog.cue` emits `[[databases]]` — per shard, one `primary` entry pointing
 at `shards[i].rw` and one `replica` entry pointing at `shards[i].ro`, both stamped
 with `shard = i` — plus `[[sharded_tables]]` from the schema contract. The whole
 structure is marshalled with CUE's `encoding/toml` into a ConfigMap, alongside a
@@ -182,19 +189,19 @@ Justfile               the verbs
 cue.mod/
   module.cue
   gen/                 vendored k8s + CNPG schemas
-shardedCluster.cue     the knobs (shardedCluster + its shardedColumns)
+shardedCluster.cue     the knobs (shardedCluster and placement zones)
 lib/
-  schema.cue           #ShardedCluster/#ShardedColumn/#Shard/#Fabric
-  fabric.cue           derivation (topology -> fabric)
-  k8s.cue              POC-grade k8s + CNPG partial schemas
-render/
-  zones.cue            placement (availability zones)
-  cnpg.cue             Cluster CRs + read Services
-  pgdog.cue            ConfigMap(pgdog.toml) + Deployment + Service
-  kind.cue             kind cluster config
-  namespace.cue        Namespace + app credentials Secret
-  manifests.cue        top-level export, sync-wave annotated
-  sql.cue              generated schema assertion
+  topology.cue         derivation (configuration -> topology)
+  schema/
+    cluster.cue        #ShardedCluster/#ShardedColumn/#Shard/#Topology
+    kubernetes.cue     POC-grade k8s + CNPG partial schemas
+  render/
+    cnpg.cue           Cluster CRs + read Services
+    pgdog.cue          ConfigMap(pgdog.toml) + Deployment + Service
+    kind.cue           kind cluster config
+    namespace.cue      Namespace + app credentials Secret
+    manifests.cue      top-level export, sync-wave annotated
+    sql.cue            generated schema assertion
 sql/
   schema.sql           hand-written DDL
   seed.sql             hand-written seed data
@@ -305,9 +312,9 @@ rendering is wanted later.
 | Add a shard at runtime | Already a one-number change in `shardedCluster.cue`; needs schema application to the new shard and a PgDog config reload. |
 | Resharding with data movement | A key-range field on `#Shard`; PgDog's logical-replication resharding is the mechanism. Note that hash sharding remaps most rows on an N to N+1 change, so this is a prerequisite for an honest rebalance. |
 | Failover demonstration | No model change; CNPG promotes and the `-rw` service follows. |
-| Zonal front doors | A comprehension over `zones` in `lib/pgdog.cue`, plus a zone-pinned Service per shard. |
-| ExternalSecrets | The secrets seam in `lib/pgdog.cue`; PgDog's Helm chart models this as `usersSecret.name` / `configSecret.name` and is worth mirroring. |
-| Observability | PgDog exposes an OpenMetrics endpoint; a ServiceMonitor would slot into `lib/pgdog.cue`. |
+| Zonal front doors | A comprehension over `zones` in `lib/render/pgdog.cue`, plus a zone-pinned Service per shard. |
+| ExternalSecrets | The secrets seam in `lib/render/pgdog.cue`; PgDog's Helm chart models this as `usersSecret.name` / `configSecret.name` and is worth mirroring. |
+| Observability | PgDog exposes an OpenMetrics endpoint; a ServiceMonitor would slot into `lib/render/pgdog.cue`. |
 
 ## 9. Risks and uncertainties
 
@@ -348,7 +355,7 @@ unapplied manifests is not complete.
    shows three distinct zones, operator pod is `Running`, and a hand-written
    `pgdog.toml` has been validated against the pinned PgDog image. No CUE renderers
    yet.
-1. **Model.** `shardedCluster.cue`, `zones.cue`, and the `lib/` package.
+1. **Model.** `shardedCluster.cue` and the `lib/` package.
    *Gate:* `cue vet` passes and `just render` produces committed golden output.
    This is the one milestone with no live-cluster gate, because it produces no
    cluster state of its own.

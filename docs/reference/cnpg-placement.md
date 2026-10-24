@@ -2,7 +2,7 @@
 
 Verified empirically against CNPG 1.30.0 on kind (Kubernetes v1.36.1),
 PostgreSQL 18.4, on 2026-08-15. This file is the source of truth for the
-field spellings the CUE renderer uses. `render/cnpg.cue` must not be written
+field spellings the CUE renderer uses. `lib/render/cnpg.cue` must not be written
 from memory.
 
 ## Verified field spellings
@@ -52,25 +52,28 @@ probe-s0-2 | sync      | priority 1
 probe-s0-3 | potential | priority 2
 ```
 
-The placement check needs a single `sync` replica, so the renderer MUST use
-`method: first`, not `any`.
+The original placement check needed a single `sync` replica and selected
+`method: first`. The current check accepts both `sync` and `quorum` states and
+checks the declared required synchronous count. The renderer does not choose
+the replication policy; the POC template now explicitly selects `any`.
 
 ## syncReplicaElectionConstraint is legacy-only
 
 CNPG docs state `.spec.postgresql.syncReplicaElectionConstraint` "only applies
 to the legacy implementation of synchronous replication"
-(`minSyncReplicas`/`maxSyncReplicas`, which maps to quorum/`ANY`). It is kept
-in the renderer because it documents the cross-zone intent and does not harm;
-with `instances == len(zones)` and `topologySpreadConstraints` (below) the
-cross-zone property is guaranteed regardless.
+(`minSyncReplicas`/`maxSyncReplicas`, which maps to quorum/`ANY`). The current
+renderer no longer injects it. Configure native placement and replication
+independently through `pg.template.spec`.
 
 ## Cross-zone is guaranteed by spread, not by the constraint
 
 With `instances: 3`, three zone-labeled workers, and
 `topologySpreadConstraints` (`maxSkew: 1`, `DoNotSchedule`), every pod lands in
 a distinct zone. Primary and sync replica therefore always sit in different
-zones. `syncReplicaElectionConstraint` is the general-case guard; in this
-POC's 3-instance/3-zone setup it is redundant but harmless.
+zones. This is the actual guard with `method: first`, not the legacy election
+constraint. The current POC template explicitly requests required CNPG
+anti-affinity on `topology.kubernetes.io/zone`. Users can select other native
+policies; there is no wrapper-level single-/multi-AZ mode or forced zone count.
 
 ## Verified cluster facts
 

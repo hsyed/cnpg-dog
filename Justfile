@@ -7,9 +7,9 @@ default:
 # Create the kind cluster and install the CNPG operator
 up: kind-up operator-up
 
-kind-up:
-    kind create cluster --config kind.yaml --image "${KIND_NODE_IMAGE}" --wait 120s
-    kubectl config use-context "kind-${CLUSTER_NAME}"
+kind-up: render
+    kind create cluster --config rendered/kind.yaml --image "${KIND_NODE_IMAGE}" --wait 120s
+    kubectl config use-context "kind-$(yq -r '.name' rendered/kind.yaml)"
 
 operator-up:
     kubectl apply --server-side -f "${CNPG_MANIFEST}"
@@ -17,40 +17,29 @@ operator-up:
 
 # Render CUE to plain YAML. PURE: touches no cluster, reads no environment.
 render:
-    mkdir -p rendered rendered-secrets
-    cue export -e kindConfig --out yaml ./render > rendered/kind.yaml
-    cue export -e namespace --out yaml ./render > rendered/namespace.yaml
-    cue export -e manifests --out yaml -t pgdogImage="${PGDOG_IMAGE}" ./render > rendered/manifests.yaml
-    cue export -e secrets --out yaml ./render > rendered-secrets/secrets.yaml
-    cue export -e 'assertSchema.out' --out text ./render > rendered/assert_schema.sql
+    bash scripts/render.sh
 
 # Structural assertions on rendered output. No cluster required.
 check-manifests: render
-    yq -e '[.items[] | select(.kind == "Cluster")] | length == 4' rendered/manifests.yaml > /dev/null
-    for i in 0 1 2 3; do \
-      yq -e "[.items[] | select(.kind == \"Cluster\" and .metadata.name == \"dog-s$i\")] | length == 1" rendered/manifests.yaml > /dev/null; \
-      yq -e "[.items[] | select(.kind == \"Service\" and .metadata.name == \"dog-s$i-read\" and .spec.trafficDistribution == \"PreferSameZone\")] | length == 1" rendered/manifests.yaml > /dev/null; \
-    done
-    @echo "PASS: 4 shards, 4 read services with PreferSameZone"
+    bash scripts/check-generated.sh manifests
 
 # Assert the rendered pgdog.toml has the expected routing table.
 check-pgdog-config: render
-    yq -r '.items[] | select(.kind == "ConfigMap" and .metadata.name == "pgdog") | .data["pgdog.toml"]' rendered/manifests.yaml > /tmp/pgdog-rendered.toml
-    test "$(grep -c '^\[\[databases\]\]' /tmp/pgdog-rendered.toml)" = "8"
-    test "$(grep -c '^\[\[sharded_tables\]\]' /tmp/pgdog-rendered.toml)" = "4"
-    test "$(grep -c '^\[\[sharded_tables\.mapping\]\]' /tmp/pgdog-rendered.toml)" = "6"
-    test "$(grep -c '^\[\[sharded_schemas\]\]' /tmp/pgdog-rendered.toml)" = "2"
-    grep -q "column = 'tenant_id'" /tmp/pgdog-rendered.toml
-    grep -q "name = 'users'" /tmp/pgdog-rendered.toml
-    grep -q "name = 'customer_a'" /tmp/pgdog-rendered.toml
-    grep -q "values = \['us', 'ca'\]" /tmp/pgdog-rendered.toml
-    grep -q 'start = 1' /tmp/pgdog-rendered.toml
-    @echo "PASS: 8 databases, 4 sharded_tables (hash/list/range), 2 sharded_schemas"
+    bash scripts/check-generated.sh pgdog
 
-# Re-render and fail if committed output is stale, or if the kind fixture drifted
-check-render: render
-    diff -u <(yq -P 'sort_keys(..)' kind.yaml) <(yq -P 'sort_keys(..)' rendered/kind.yaml)
-    git diff --exit-code -- rendered/
+# Compare fresh output with the reviewed snapshots, including uncommitted edits
+check-render:
+    @tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT; \
+      bash scripts/render.sh "$tmp/rendered" "$tmp/secrets"; \
+      diff -ru rendered "$tmp/rendered"
+
+# Exercise topology, native templates, and local kind configuration offline
+check-topology:
+    bash scripts/check-topology.sh
+
+# Regenerate native schemas from the release pins in flake.nix
+update-schemas:
+    bash scripts/update-schemas.sh
 
 fmt:
     cue fmt ./...
@@ -80,11 +69,11 @@ seed: render
       psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < sql/seed.sql
 
 # Run all assertions
-check: check-render check-manifests check-pgdog-config
+check: check-render check-manifests check-pgdog-config check-topology
     bash scripts/check-placement.sh
     bash scripts/check-routing.sh
     @echo "ALL CHECKS PASSED"
 
 # Delete the kind cluster
 down:
-    kind delete cluster --name "${CLUSTER_NAME}"
+    kind delete cluster --name "$(cue export -e kindConfig.name --out text .)"

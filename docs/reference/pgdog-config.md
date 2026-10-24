@@ -2,7 +2,7 @@
 
 Verified empirically against `ghcr.io/pgdogdev/pgdog:v0.1.53` on 2026-08-15.
 This file is the source of truth for the TOML key names the CUE renderer emits.
-`render/pgdog.cue` must not be written from memory or from the plan.
+`lib/render/pgdog.cue` must not be written from memory or from the plan.
 
 ## CLI invocation (critical)
 
