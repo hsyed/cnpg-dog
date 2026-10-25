@@ -44,7 +44,7 @@ update-schemas:
 fmt:
     cue fmt ./...
 vet:
-    cue vet -t pgdogImage="${PGDOG_IMAGE}" ./...
+    scripts/cue.sh vet ./...
 
 # Apply rendered manifests, wave by wave
 apply: render
@@ -54,19 +54,27 @@ apply: render
     just wait
 
 wait:
-    kubectl -n "${APP_NS}" wait --for=condition=Ready cluster --all --timeout=600s
+    ns="$(scripts/cue.sh export -e topology.name --out text .)"; \
+      kubectl -n "$ns" wait --for=condition=Ready cluster --all --timeout=600s
 
-# Apply schema and seed data through PgDog
+# PgDog pods started before the tables existed route keyless reads on
+# column-only rules to a single shard (observed on v0.1.53), so seeding
+# restarts PgDog between the DDL and the data.
+# Apply schema and type assertions, then seed data, through PgDog
 seed: render
-    kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
-      --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
-      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < tests/local/sql/schema.sql
-    kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
-      --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
-      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < rendered/assert_schema.sql
-    kubectl -n "${APP_NS}" run psql-probe --rm -i --restart=Never \
-      --image="${PG_IMAGE}" --env=PGPASSWORD=dogpassword -- \
-      psql -h pgdog -p 6432 -U dog -d dog -v ON_ERROR_STOP=1 -f - < tests/local/sql/seed.sql
+    name="$(scripts/cue.sh export -e topology.name --out text .)"; \
+      user="$(scripts/cue.sh export -e credentials.username --out text .)"; \
+      pw="$(scripts/cue.sh export -e credentials.password --out text .)"; \
+      psql() { \
+        kubectl -n "$name" delete pod psql-probe --ignore-not-found; \
+        cat "$@" | kubectl -n "$name" run psql-probe --rm -i --restart=Never \
+          --image="${PG_IMAGE}" --env=PGPASSWORD="$pw" -- \
+          psql -h pgdog -p 6432 -U "$user" -d "$name" -v ON_ERROR_STOP=1 -f -; \
+      }; \
+      psql tests/local/sql/schema.sql rendered/assert_schema.sql; \
+      kubectl -n "$name" rollout restart deployment/pgdog; \
+      kubectl -n "$name" rollout status deployment/pgdog --timeout=180s; \
+      psql tests/local/sql/seed.sql
 
 # Run all assertions
 check: check-render check-manifests check-pgdog-config check-topology

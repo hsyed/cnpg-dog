@@ -137,13 +137,22 @@ invalid: {
 	shardCount: {config: {pg: shards: 0}}
 	instanceCount: {config: {pg: template: spec: instances: 0}}
 	proxyCount: {config: {dog: replicas: 0}}
-	oldReplicas: {config: {pg: replicas: 3}}
-	oldAvailability: {config: {pg: availability: "multi-az"}}
-	oldInstances: {config: {pg: instances: 3}}
 	columnMapping: {config: {
 		pg: shards: 2
 		dog: shardedColumns: [{
 			column: "region", dataType: "varchar", mapping: [{shard: 2}]
+		}]
+	}}
+	mappingShape: {config: {
+		pg: shards: 2
+		dog: shardedColumns: [{
+			column: "order_id", dataType: "bigint", mapping: [{values: [1], start: 1, shard: 0}]
+		}]
+	}}
+	mappingType: {config: {
+		pg: shards: 2
+		dog: shardedColumns: [{
+			column: "order_id", dataType: "bigint", mapping: [{values: ["one"], shard: 0}]
 		}]
 	}}
 	schemaMapping: {config: {

@@ -1,11 +1,9 @@
 package render
 
-import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
-
 #Output: {
 	topology: _
 
-	_namespace: topologyTypes.#Namespace & {
+	_namespace: {
 		apiVersion: "v1"
 		kind:       "Namespace"
 		metadata: {
@@ -15,8 +13,14 @@ import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 	}
 	namespace: _namespace
 
-	// POC credentials. Export only through the gitignored secrets stream.
-	_appSecret: topologyTypes.#Secret & {
+	// POC credentials, shared by CNPG and PgDog. Export only through the
+	// gitignored secrets stream; local tooling reads them from credentials.
+	_password: "dogpassword"
+	credentials: {
+		username: topology.name
+		password: _password
+	}
+	_appSecret: {
 		apiVersion: "v1"
 		kind:       "Secret"
 		type:       "kubernetes.io/basic-auth"
@@ -25,9 +29,6 @@ import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 			namespace: topology.name
 			annotations: "argocd.argoproj.io/sync-wave": "0"
 		}
-		stringData: {
-			username: topology.name
-			password: "dogpassword"
-		}
+		stringData: credentials
 	}
 }

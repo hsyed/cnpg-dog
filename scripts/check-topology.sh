@@ -48,7 +48,7 @@ jq -e '
   ([.singleton.output.manifests.items[] | select(.kind == "Cluster")][0] ==
    [.expanded.output.manifests.items[] | select(.kind == "Cluster")][0]) and
   (.singleInstance.output.manifests.items | all(
-    if .kind == "Service" then (.metadata.name | endswith("-read") | not)
+    if .kind == "Cluster" then .spec.managed == null
     else true end
   ))
 ' "$tmp/cases.json" > /dev/null
@@ -87,6 +87,6 @@ while IFS= read -r name; do
   if cue vet -c -d '#Case' ./tests "$tmp/input.json" > "$tmp/error.log" 2>&1; then
     echo "FAIL: invalid case $name was accepted"; exit 1
   fi
-  grep -q 'conflicting\|invalid\|incompatible\|not allowed\|out of bound' "$tmp/error.log"
+  grep -q 'conflicting\|explicit error\|invalid\|incompatible\|not allowed\|out of bound' "$tmp/error.log"
   echo "PASS: rejected $name"
 done < <(jq -r 'keys[]' "$tmp/invalid.json")

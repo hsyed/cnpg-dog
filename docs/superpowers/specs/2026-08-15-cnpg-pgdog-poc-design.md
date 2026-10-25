@@ -3,6 +3,11 @@
 **Date:** 2026-08-15
 **Status:** Approved for planning
 
+**Historical design:** file layout and some field choices below (for example
+`lib/render/kind.cue`, `sql/schema.sql`, `syncReplicaElectionConstraint`) were
+superseded during implementation. See `README.md` for the current layout,
+configuration, and commands.
+
 ## 1. Purpose
 
 Prove out a cloud-native Postgres deployment where [CloudNativePG](https://cloudnative-pg.io/)

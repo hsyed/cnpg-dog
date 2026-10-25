@@ -2,12 +2,14 @@ package render
 
 import (
 	"encoding/toml"
-	topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
+	"crypto/sha256"
+	"encoding/hex"
 )
 
 #Output: {
 	topology:   _
 	pgdogImage: _
+	_password:  _
 
 	// Native PgDog key names: see docs/reference/pgdog-config.md.
 	_pgdogConfig: {
@@ -49,9 +51,9 @@ import (
 	_pgdogUsers: users: [{
 		name:     topology.name
 		database: topology.name
-		password: "dogpassword"
+		password: _password
 	}]
-	_pgdogConfigMap: topologyTypes.#ConfigMap & {
+	_pgdogConfigMap: {
 		apiVersion: "v1"
 		kind:       "ConfigMap"
 		metadata: {
@@ -61,7 +63,7 @@ import (
 		}
 		data: "pgdog.toml": toml.Marshal(_pgdogConfig)
 	}
-	_pgdogSecret: topologyTypes.#Secret & {
+	_pgdogSecret: {
 		apiVersion: "v1"
 		kind:       "Secret"
 		metadata: {
@@ -71,7 +73,7 @@ import (
 		}
 		stringData: "users.toml": toml.Marshal(_pgdogUsers)
 	}
-	_pgdogDeployment: topologyTypes.#Deployment & {
+	_pgdogDeployment: {
 		apiVersion: "apps/v1"
 		kind:       "Deployment"
 		metadata: {
@@ -83,7 +85,11 @@ import (
 			replicas: topology.dog.replicas
 			selector: matchLabels: app: "pgdog"
 			template: {
-				metadata: labels: app: "pgdog"
+				metadata: {
+					labels: app: "pgdog"
+					// subPath mounts never refresh: roll pods when config or users change.
+					annotations: "cnpg-dog/config-hash": hex.Encode(sha256.Sum256(_pgdogConfigMap.data["pgdog.toml"] + _pgdogSecret.stringData["users.toml"]))
+				}
 				spec: {
 					if topology.dog.affinity != _|_ {
 						affinity: topology.dog.affinity
@@ -100,6 +106,7 @@ import (
 							resources: topology.dog.resources
 						}
 						ports: [{containerPort: 6432, name: "pgdog"}]
+						readinessProbe: tcpSocket: port: "pgdog"
 						volumeMounts: [
 							{name: "config", mountPath: "/etc/pgdog/pgdog.toml", subPath: "pgdog.toml"},
 							{name: "users", mountPath: "/etc/pgdog/users.toml", subPath: "users.toml"},
@@ -113,7 +120,7 @@ import (
 			}
 		}
 	}
-	_pgdogService: topologyTypes.#Service & {
+	_pgdogService: {
 		apiVersion: "v1"
 		kind:       "Service"
 		metadata: {

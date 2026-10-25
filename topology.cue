@@ -12,8 +12,8 @@ topology: topologyTypes.#Topology & {
 		template: {
 			metadata: labels: "app.kubernetes.io/part-of": "cnpg-dog"
 			spec: {
-				instances: 3 // Includes the primary.
-				imageName: "ghcr.io/cloudnative-pg/postgresql:18"
+				instances: 3        // Includes the primary.
+				imageName: _pgImage // Pinned in flake.nix.
 				// Small local POC, not production sizing. PVCs cannot shrink
 				// in-place: this size is for a fresh local deployment.
 				storage: size: "512Mi"

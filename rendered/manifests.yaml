@@ -26,8 +26,17 @@ items:
           owner: dog
           secret:
             name: dog-app
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      imageName: ghcr.io/cloudnative-pg/postgresql:18.4
       instances: 3
+      managed:
+        services:
+          additional:
+            - selectorType: ro
+              serviceTemplate:
+                metadata:
+                  name: dog-s0-read
+                spec:
+                  trafficDistribution: PreferSameZone
       postgresql:
         parameters:
           shared_buffers: 32MB
@@ -70,8 +79,17 @@ items:
           owner: dog
           secret:
             name: dog-app
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      imageName: ghcr.io/cloudnative-pg/postgresql:18.4
       instances: 3
+      managed:
+        services:
+          additional:
+            - selectorType: ro
+              serviceTemplate:
+                metadata:
+                  name: dog-s1-read
+                spec:
+                  trafficDistribution: PreferSameZone
       postgresql:
         parameters:
           shared_buffers: 32MB
@@ -114,8 +132,17 @@ items:
           owner: dog
           secret:
             name: dog-app
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      imageName: ghcr.io/cloudnative-pg/postgresql:18.4
       instances: 3
+      managed:
+        services:
+          additional:
+            - selectorType: ro
+              serviceTemplate:
+                metadata:
+                  name: dog-s2-read
+                spec:
+                  trafficDistribution: PreferSameZone
       postgresql:
         parameters:
           shared_buffers: 32MB
@@ -158,8 +185,17 @@ items:
           owner: dog
           secret:
             name: dog-app
-      imageName: ghcr.io/cloudnative-pg/postgresql:18
+      imageName: ghcr.io/cloudnative-pg/postgresql:18.4
       instances: 3
+      managed:
+        services:
+          additional:
+            - selectorType: ro
+              serviceTemplate:
+                metadata:
+                  name: dog-s3-read
+                spec:
+                  trafficDistribution: PreferSameZone
       postgresql:
         parameters:
           shared_buffers: 32MB
@@ -183,74 +219,6 @@ items:
           memory: 128Mi
       storage:
         size: 512Mi
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      annotations:
-        argocd.argoproj.io/sync-wave: "1"
-      name: dog-s0-read
-      namespace: dog
-    spec:
-      ports:
-        - name: postgres
-          port: 5432
-          targetPort: 5432
-      selector:
-        cnpg.io/cluster: dog-s0
-        cnpg.io/instanceRole: replica
-      trafficDistribution: PreferSameZone
-      type: ClusterIP
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      annotations:
-        argocd.argoproj.io/sync-wave: "1"
-      name: dog-s1-read
-      namespace: dog
-    spec:
-      ports:
-        - name: postgres
-          port: 5432
-          targetPort: 5432
-      selector:
-        cnpg.io/cluster: dog-s1
-        cnpg.io/instanceRole: replica
-      trafficDistribution: PreferSameZone
-      type: ClusterIP
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      annotations:
-        argocd.argoproj.io/sync-wave: "1"
-      name: dog-s2-read
-      namespace: dog
-    spec:
-      ports:
-        - name: postgres
-          port: 5432
-          targetPort: 5432
-      selector:
-        cnpg.io/cluster: dog-s2
-        cnpg.io/instanceRole: replica
-      trafficDistribution: PreferSameZone
-      type: ClusterIP
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      annotations:
-        argocd.argoproj.io/sync-wave: "1"
-      name: dog-s3-read
-      namespace: dog
-    spec:
-      ports:
-        - name: postgres
-          port: 5432
-          targetPort: 5432
-      selector:
-        cnpg.io/cluster: dog-s3
-        cnpg.io/instanceRole: replica
-      trafficDistribution: PreferSameZone
-      type: ClusterIP
   - apiVersion: v1
     data:
       pgdog.toml: |
@@ -398,6 +366,8 @@ items:
           app: pgdog
       template:
         metadata:
+          annotations:
+            cnpg-dog/config-hash: ea872a7fb75f4fec00af3c23b23c8f42b96742e2fb1c3e0558ca010d642fbeac
           labels:
             app: pgdog
         spec:
@@ -415,6 +385,9 @@ items:
               ports:
                 - containerPort: 6432
                   name: pgdog
+              readinessProbe:
+                tcpSocket:
+                  port: pgdog
               resources:
                 limits:
                   cpu: 100m

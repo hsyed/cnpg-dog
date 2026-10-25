@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-cue export -e topology . > "$tmp/topology.json"
+scripts/cue.sh export -e topology . > "$tmp/topology.json"
 yq -o=json '.' rendered/manifests.yaml > "$tmp/manifests.json"
 
 case "${1:?expected manifests or pgdog}" in
@@ -11,16 +11,17 @@ case "${1:?expected manifests or pgdog}" in
     jq -e --slurpfile configs "$tmp/topology.json" '
       $configs[0] as $c |
       [.items[] | select(.kind == "Cluster")] as $clusters |
-      [.items[] | select(.kind == "Service" and (.metadata.name | endswith("-read")))] as $reads |
       ($clusters | length) == $c.pg.shards and
-      ($reads | length) == (if $c.pg.template.spec.instances > 1 then $c.pg.shards else 0 end) and
+      ($clusters | all((.spec.managed.services.additional // []) == (if $c.pg.template.spec.instances > 1 then [{
+        selectorType: "ro",
+        serviceTemplate: {metadata: {name: "\(.metadata.name)-read"}, spec: {trafficDistribution: "PreferSameZone"}}
+      }] else [] end))) and
       ($clusters | all(.spec.instances == $c.pg.template.spec.instances)) and
       ($clusters | all(. as $cluster |
         ($c.pg.template.spec | to_entries | all(
           . as $entry | $cluster.spec[$entry.key] == $entry.value
         ))
       )) and
-      ($reads | all(.spec.trafficDistribution == "PreferSameZone")) and
       all(range(0; $c.pg.shards);
         . as $i | ($clusters | any(.metadata.name == "\($c.name)-s\($i)")))
     ' "$tmp/manifests.json" > /dev/null

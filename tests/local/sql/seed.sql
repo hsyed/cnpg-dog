@@ -400,3 +400,32 @@ INSERT INTO events (tenant_id, payload) VALUES (38, 'payload-397');
 INSERT INTO events (tenant_id, payload) VALUES (39, 'payload-398');
 INSERT INTO events (tenant_id, payload) VALUES (40, 'payload-399');
 INSERT INTO events (tenant_id, payload) VALUES (1, 'payload-400');
+
+-- One fixture per non-hash rule in topology.cue; check-routing.sh asserts
+-- the exact shard of each row. List: us/ca -> 0, eu -> 1, fallback -> 2.
+INSERT INTO regions (region) VALUES ('us');
+INSERT INTO regions (region) VALUES ('ca');
+INSERT INTO regions (region) VALUES ('eu');
+INSERT INTO regions (region) VALUES ('jp');
+
+-- Range (end exclusive): [1,100) -> 0, [100,200) -> 1, fallback -> 2.
+INSERT INTO orders (order_id) VALUES (1);
+INSERT INTO orders (order_id) VALUES (99);
+INSERT INTO orders (order_id) VALUES (100);
+INSERT INTO orders (order_id) VALUES (199);
+INSERT INTO orders (order_id) VALUES (200);
+INSERT INTO orders (order_id) VALUES (500);
+
+-- UUID hash on users.company_id: completeness and reachability only.
+INSERT INTO users (company_id) VALUES ('00000000-0000-0000-0000-000000000001');
+INSERT INTO users (company_id) VALUES ('11111111-1111-1111-1111-111111111111');
+INSERT INTO users (company_id) VALUES ('22222222-2222-2222-2222-222222222222');
+INSERT INTO users (company_id) VALUES ('33333333-3333-3333-3333-333333333333');
+INSERT INTO users (company_id) VALUES ('44444444-4444-4444-4444-444444444444');
+INSERT INTO users (company_id) VALUES ('55555555-5555-5555-5555-555555555555');
+INSERT INTO users (company_id) VALUES ('66666666-6666-6666-6666-666666666666');
+INSERT INTO users (company_id) VALUES ('77777777-7777-7777-7777-777777777777');
+
+-- Schema routing: customer_a -> 0, customer_b -> 1.
+INSERT INTO customer_a.notes (id, body) VALUES (1, 'a');
+INSERT INTO customer_b.notes (id, body) VALUES (1, 'b');

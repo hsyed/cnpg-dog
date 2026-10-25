@@ -1,12 +1,11 @@
 package render
 
-import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
-
 #Output: {
 	topology: _
 
-	// Native fields pass through unchanged. Shard identity and sync-wave are
-	// owned by orchestration; contradictory template values fail unification.
+	// Native fields pass through unchanged. Shard identity, sync-wave, and the
+	// read service are owned by orchestration; contradictory template values
+	// (including a template managed.services.additional) fail unification.
 	_clusters: [for s in topology.shards {
 		topology.pg.template & {
 			metadata: {
@@ -24,27 +23,17 @@ import topologyTypes "github.com/hsyed/cnpg-dog/lib/topology"
 						secret: name: "\(topology.name)-app"
 					}
 				}
-			}
-		}
-	}]
 
-	_readServices: [for s in topology.shards if topology.pg.template.spec.instances > 1 {
-		topologyTypes.#Service & {
-			apiVersion: "v1"
-			kind:       "Service"
-			metadata: {
-				name:      s.ro
-				namespace: topology.name
-				annotations: "argocd.argoproj.io/sync-wave": "1"
-			}
-			spec: {
-				type:                "ClusterIP"
-				trafficDistribution: "PreferSameZone"
-				selector: {
-					"cnpg.io/cluster":      s.cluster
-					"cnpg.io/instanceRole": "replica"
+				// Zone-local replica reads for PgDog, owned by the Cluster.
+				if topology.pg.template.spec.instances > 1 {
+					managed: services: additional: [{
+						selectorType: "ro"
+						serviceTemplate: {
+							metadata: name:            s.ro
+							spec: trafficDistribution: "PreferSameZone"
+						}
+					}]
 				}
-				ports: [{name: "postgres", port: 5432, targetPort: 5432}]
 			}
 		}
 	}]

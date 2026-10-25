@@ -41,14 +41,22 @@ import "github.com/hsyed/cnpg-dog/lib/topology/upstream"
 	name?:    string
 	column:   string
 	dataType: "bigint" | "uuid" | "varchar"
-	mapping?: [...#ShardMapping]
+	// Mapping values must match the column's data type.
+	let T = {bigint: int, uuid: string, varchar: string}[dataType]
+	mapping?: [...{#ShardMapping, #T: T}]
 }
 
+// One shape per entry: a list (values) cannot also be a range (start/end).
 #ShardMapping: {
+	#T:    _
 	shard: int & >=0
-	values?: [...int] | [...string]
-	start?: int | string
-	end?:   int | string
+	values?: [#T, ...#T]
+	start?: #T
+	end?:   #T
+	if values != _|_ {
+		start?: _|_
+		end?:   _|_
+	}
 }
 
 #ShardedSchema: {

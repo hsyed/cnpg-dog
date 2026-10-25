@@ -8,7 +8,8 @@ front of them, with the entire topology encoded in CUE. See
 
 Every version pin (kind node image, CNPG operator release, PgDog image,
 Postgres image) lives in `flake.nix` and nowhere else. The devShell exports
-them as environment variables that the Justfile recipes read.
+them as environment variables; `scripts/cue.sh` injects the image pins into CUE
+as tags (`pgdogImage`, `pgImage`), and the Justfile recipes read the rest.
 
 ## Running
 
@@ -36,7 +37,9 @@ just check   # expects "ALL CHECKS PASSED"
 shape (`check-manifests`), the rendered PgDog routing table
 (`check-pgdog-config`), topology fixtures (`check-topology`),
 placement (`scripts/check-placement.sh`), and
-partition/completeness/reachability (`scripts/check-routing.sh`).
+per-rule routing (`scripts/check-routing.sh`: bigint and uuid hash completeness,
+spread, and reachability through PgDog; exact shards for list, range, and
+schema rules).
 
 ## Configuration
 
@@ -55,7 +58,7 @@ topology: topologyTypes.#Topology & {
             metadata: labels: team: "platform"
             spec: {
                 instances: 3 // Includes the primary; defaults to 3.
-                imageName: "ghcr.io/cloudnative-pg/postgresql:18"
+                imageName: _pgImage // PG_IMAGE from flake.nix
                 storage: size: "32Gi"
                 resources: {
                     requests: {cpu: "500m", memory: "1Gi"}
@@ -186,7 +189,9 @@ invalid inputs. Live checks follow the declared native CNPG anti-affinity and
 required synchronous policy, accepting both `sync` and `quorum` replica states.
 `just check-render` compares a fresh render with the working-tree golden files
 without overwriting them, so reviewed uncommitted snapshot updates work too.
-The live seed/routing test still uses the POC's `dog` database and 400-row fixture.
+Database, user, and password for the live seed/routing test come from CUE
+(`topology.name`, `credentials`); the fixtures in `tests/local/sql/` match the
+four-shard rules in `topology.cue`.
 
 ## Deviations discovered while implementing
 
@@ -204,6 +209,16 @@ of thing that would otherwise surprise a future reader:
   `docs/reference/pgdog-config.md`.
 - **`trafficDistribution` renamed.** Kubernetes 1.36 deprecates `PreferClose`
   in favour of `PreferSameZone`; the read Services use `PreferSameZone`.
+- **Read Services are CNPG-managed.** Each shard's `<cluster>-read` Service is
+  declared in `spec.managed.services.additional` (`selectorType: ro`), so the
+  Cluster owns it. The renderer owns that list: a template that also sets it
+  fails unification.
+- **PgDog schema discovery.** PgDog pods that started before a table existed
+  route keyless reads on column-only `sharded_tables` rules to a single shard.
+  `just seed` restarts PgDog between the DDL and the data.
+- **Config rollout.** PgDog mounts its config through `subPath`, which never
+  refreshes, so the pod template carries a hash of `pgdog.toml` and `users.toml`
+  to roll the pods on change.
 - **Seed shape.** `INSERT ... SELECT` is not sharded by PgDog (all rows landed
   on one shard); single-tuple `INSERT ... VALUES` is. The seed emits one
   statement per row.
@@ -216,14 +231,14 @@ of thing that would otherwise surprise a future reader:
 ```text
 topology.cue                user configuration: topology.pg / topology.dog
 outputs.cue                 root composition and public exports
+scripts/cue.sh              cue with the flake.nix image pins as tags
 lib/
   topology.cue             validated configuration → shard names and endpoints
   topology/
     cluster.cue            cluster, shard, topology, and routing definitions
-    kubernetes.cue         aliases to native upstream resource types
     upstream/              generated Kubernetes/CNPG definitions
   render/
-    cnpg.cue               CNPG clusters and read services
+    cnpg.cue               CNPG clusters (with managed read services)
     pgdog.cue              PgDog configuration and deployment
     namespace.cue          namespace and credentials
     sql.cue                generated schema assertions
@@ -233,6 +248,6 @@ tests/
   local/
     kind.yaml              independent local Kubernetes fixture (plain YAML)
     sql/
-      schema.sql           disposable routing-test tables
-      seed.sql             400-row routing-test dataset
+      schema.sql           disposable routing-test tables and tenant schemas
+      seed.sql             400 hash rows plus list/range/uuid/schema fixtures
 ```

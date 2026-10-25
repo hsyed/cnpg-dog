@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-ns="${APP_NS:-dog}"
+ns=$(scripts/cue.sh export -e topology.name --out text .)
 fail=0
-config=$(cue export -e topology .)
+config=$(scripts/cue.sh export -e topology .)
 instances=$(jq -r '.pg.template.spec.instances' <<< "$config")
 proxies=$(jq -r '.dog.replicas' <<< "$config")
 nodes=$(kubectl get nodes -o json)
